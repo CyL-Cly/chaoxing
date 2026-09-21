@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "学习通作业聚合",
+    "description": "Extension display name"
+  },
+  "extDescription": {
+    "message": "汇总学习通各科作业与考试，点击打开电脑版页面。可选在扩展内登录；匿名使用统计可关闭。非官方。",
+    "description": "Extension description"
+  }
+}

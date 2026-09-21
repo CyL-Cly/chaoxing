@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>学习通作业聚合 · Edge 浏览器扩展</title>
+  <meta name="description" content="汇总学习通所有科目的作业与考试，一键直达电脑版作答页，免去来回翻找的烦恼。" />
+  <meta name="theme-color" content="#1496ff" />
+  <link rel="icon" type="image/png" href="icon128.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    /* ========== 基础 ========== */
+    :root {
+      --bg-base: #eef4f9;
+      --text: #12304a;
+      --text-secondary: #4d6680;
+      --text-muted: #7a91a8;
+      --accent: #1496ff;
+      --accent-2: #12c4b0;
+      --accent-soft: rgba(20, 150, 255, 0.12);
+      --line: #cfe0ef;
+      --line-strong: #9ec5e8;
+      --shadow: 0 10px 30px rgba(18, 70, 120, 0.08);
+      --shadow-sm: 0 4px 14px rgba(18, 70, 120, 0.06);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --grad-accent: linear-gradient(135deg, #1496ff, #12c4b0);
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --body-grad:
+        radial-gradient(900px 420px at 8% -10%, rgba(20, 150, 255, 0.16), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.14), transparent 55%),
+        linear-gradient(180deg, #f4f9fd 0%, var(--bg-base) 45%, #e9f1f8 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--body-grad);
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(20, 150, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20, 150, 255, 0.045) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ========== Header ========== */
+    header.nav {
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text);
+    }
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      box-shadow: 0 6px 16px rgba(20, 150, 255, 0.3);
+    }
+    .brand .plus {
+      background: var(--grad-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      font-size: 14px;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+    }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+
+    /* ========== Hero ========== */
+    .hero {
+      padding: 64px 0 56px;
+      text-align: center;
+    }
+    .hero .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(20, 150, 255, 0.1);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid rgba(20, 150, 255, 0.25);
+      margin-bottom: 22px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+      margin-bottom: 18px;
+    }
+    .hero h1 .grad {
+      background: var(--grad-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p.lead {
+      font-size: clamp(15px, 1.6vw, 18px);
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 32px;
+    }
+    .hero .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+      font-family: inherit;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--grad-accent);
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(20, 150, 255, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(20, 150, 255, 0.4);
+      text-decoration: none;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .meta {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      font-size: 13px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+    .meta span { display: inline-flex; align-items: center; gap: 6px; }
+
+    /* ========== Hero mock ========== */
+    .hero-mock {
+      margin-top: 56px;
+      background: linear-gradient(180deg, #ffffff, #f8fcff);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      max-width: 880px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .mock-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 16px;
+      background: linear-gradient(180deg, #ffffff, #f4faff);
+      border-bottom: 1px solid var(--line);
+    }
+    .mock-titlebar .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .mock-titlebar .dot.r { background: #ff5f57; }
+    .mock-titlebar .dot.y { background: #febc2e; }
+    .mock-titlebar .dot.g { background: #28c840; }
+    .mock-titlebar .title {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .mock-body {
+      display: flex;
+      min-height: 340px;
+    }
+    .mock-aside {
+      width: 200px;
+      padding: 18px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(244,250,255,0.9));
+      border-right: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+    .mock-aside .brand-mini {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px 14px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .mock-aside .brand-mini img {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
+    .mock-aside .nav-item {
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+    .mock-aside .nav-item.active {
+      color: #0b63ce;
+      background: linear-gradient(90deg, rgba(20, 150, 255, 0.14), rgba(18, 196, 176, 0.08));
+      border-left: 3px solid var(--accent);
+      font-weight: 600;
+    }
+    .mock-main {
+      flex: 1;
+      padding: 22px 26px;
+      overflow: hidden;
+    }
+    .mock-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 9px 12px;
+      background: linear-gradient(180deg, #ffffff, #f4faff);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .mock-toolbar .pill {
+      padding: 4px 12px;
+      font-size: 11px;
+      background: var(--grad-accent);
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .mock-toolbar .chip {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .mock-group { margin-bottom: 14px; }
+    .mock-group-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, #ffffff, #f8fcff);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .mock-group-head .count { color: var(--text-muted); font-size: 11px; font-weight: 400; margin-left: 4px; }
+    .mock-group-head .open-btn {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--accent);
+      padding: 2px 10px;
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+    }
+    .mock-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .mock-row .row-title { flex: 1; color: var(--text); }
+    .mock-row .row-type {
+      font-size: 10px;
+      color: #27ae60;
+    }
+    .mock-row .row-type.phone { color: #e67e22; }
+    .mock-row .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .mock-row .badge.pending { background: #fff0f0; color: #e74c3c; border: 1px solid #ffc9c9; }
+    .mock-row .badge.done { background: #e8faf3; color: #12b886; border: 1px solid #a7e8d6; }
+
+    /* ========== Sections ========== */
+    section {
+      padding: 64px 0;
+    }
+    section h2 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+    section .sub {
+      text-align: center;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-size: 15px;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .feature {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(10px);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .feature:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+    }
+    .feature .ico {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--grad-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 16px rgba(20, 150, 255, 0.25);
+    }
+    .feature .ico svg { width: 22px; height: 22px; }
+    .feature h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .feature p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* ========== Steps ========== */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .step {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+    .step .num {
+      position: absolute;
+      top: -14px;
+      left: 18px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--grad-accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(20, 150, 255, 0.3);
+    }
+    .step h3 { font-size: 15px; font-weight: 700; margin: 8px 0 6px; }
+    .step p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
+
+    /* ========== FAQ ========== */
+    .faq {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    details.faq-item {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+    details.faq-item[open] { box-shadow: var(--shadow); }
+    details.faq-item summary {
+      padding: 16px 22px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text);
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    details.faq-item summary::-webkit-details-marker { display: none; }
+    details.faq-item summary::after {
+      content: "+";
+      font-size: 22px;
+      color: var(--accent);
+      font-weight: 400;
+      transition: transform .2s ease;
+    }
+    details.faq-item[open] summary::after { transform: rotate(45deg); }
+    details.faq-item .ans {
+      padding: 0 22px 18px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    /* ========== Privacy / Permissions ========== */
+    .privacy {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(10px);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .privacy h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .privacy h3:not(:first-child) { margin-top: 22px; }
+    .privacy p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 10px; }
+    .privacy code {
+      background: rgba(20, 150, 255, 0.08);
+      color: #0b63ce;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    }
+
+    /* ========== Footer ========== */
+    footer {
+      padding: 40px 0 50px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--text-secondary); }
+    footer .links {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      header.nav { padding: 18px 0; }
+      .nav-links { display: none; }
+      .hero { padding: 36px 0 32px; }
+      .hero-mock { margin-top: 36px; }
+      .mock-aside { display: none; }
+      .mock-body { min-height: 280px; }
+      section { padding: 44px 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- ========== Nav ========== -->
+    <header class="nav">
+      <div class="brand">
+        <img src="icon128.png" alt="logo" />
+        <span>学习通<span class="plus">作业</span>聚合</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#howto">使用方法</a>
+        <a href="#privacy">权限</a>
+        <a href="privacy.html">隐私政策</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </header>
+
+    <!-- ========== Hero ========== -->
+    <section class="hero">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z"/></svg>
+        Edge / Chrome 浏览器扩展
+      </div>
+      <h1>学习通作业<span class="grad">一屏聚合</span><br />一键直达电脑版</h1>
+      <p class="lead">把所有课程的作业、考试归到同一个面板里，按课程分组、过滤未完成、识别已过期；点开就是电脑版页面，告别在手机版里翻找。不代答、不代交、不改进度。</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" id="downloadBtn" href="https://microsoftedge.microsoft.com/addons/detail/ocagfglinciobakiaicbfnnnfpffhnmb" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 V15 M7 10 L12 15 L17 10 M5 21 H19"/></svg>
+          前往 Edge 商店安装
+        </a>
+        <a class="btn btn-secondary" href="#howto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8 V16 M8 12 H16"/></svg>
+          查看使用方式
+        </a>
+      </div>
+      <div class="meta">
+        <span>当前版本 · v1.1.16</span>
+        <span>·</span>
+        <span>Manifest V3</span>
+        <span>·</span>
+        <span>不上传到作者服务器</span>
+      </div>
+
+      <!-- Hero 模拟截图 -->
+      <div class="hero-mock">
+        <div class="mock-titlebar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="title">学习通作业聚合</span>
+        </div>
+        <div class="mock-body">
+          <aside class="mock-aside">
+            <div class="brand-mini">
+              <img src="icon128.png" alt="logo" />
+              <span>学习通作业</span>
+            </div>
+            <div class="nav-item active">作业</div>
+            <div class="nav-item">考试</div>
+            <div class="nav-item">高级</div>
+          </aside>
+          <div class="mock-main">
+            <div class="mock-toolbar">
+              <span class="pill">刷新</span>
+              <span class="chip">☑ 仅看未完成</span>
+              <span class="chip">☐ 仅看可提交</span>
+            </div>
+            <div class="mock-group">
+              <div class="mock-group-head">
+                《高等数学》<span class="count">3 项</span>
+                <span class="open-btn">打开本课集合页</span>
+              </div>
+              <div class="mock-row">
+                <span class="row-title">第一章 课后作业</span>
+                <span class="row-type">电脑版</span>
+                <span class="badge pending">未提交</span>
+              </div>
+              <div class="mock-row">
+                <span class="row-title">第二章 习题</span>
+                <span class="row-type">电脑版</span>
+                <span class="badge done">已完成</span>
+              </div>
+              <div class="mock-row">
+                <span class="row-title">阶段测验</span>
+                <span class="row-type phone">手机版</span>
+                <span class="badge pending">待完成</span>
+              </div>
+            </div>
+            <div class="mock-group">
+              <div class="mock-group-head">
+                《大学英语》<span class="count">2 项</span>
+                <span class="open-btn">打开本课集合页</span>
+              </div>
+              <div class="mock-row">
+                <span class="row-title">Unit 3 Reading Report</span>
+                <span class="row-type">电脑版</span>
+                <span class="badge pending">未提交</span>
+              </div>
+              <div class="mock-row">
+                <span class="row-title">口语录音作业</span>
+                <span class="row-type">电脑版</span>
+                <span class="badge done">已完成</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Features ========== -->
+    <section id="features">
+      <h2>它能做什么</h2>
+      <p class="sub">专为学习通电脑用户设计，把分散在各门课程里的作业和考试统一拉到眼前。</p>
+      <div class="features">
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+          <h3>全课程聚合</h3>
+          <p>一次性把当学期所有课程的作业列表拉过来，按课程归组、显示条目数量，一眼看清哪些还没做。</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21 H16 M12 17 V21"/></svg></div>
+          <h3>电脑版直达</h3>
+          <p>点击作业直接打开 mooc2 电脑版作答页，遇到没有电脑版的会自动回退到手机版，绝不让你卡死。</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08 V12 a10 10 0 1 1 -5.93 -9.14"/><path d="M22 4 L12 14.01 L9 11.01"/></svg></div>
+          <h3>智能过滤</h3>
+          <p>勾选「仅看未完成」或「仅看可提交」快速聚焦重点；自动标记已过期作业，避免误点。</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11 L12 14 L20 4"/><path d="M20 12 V19 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2 V6 a2 2 0 0 1 2 -2 H14"/></svg></div>
+          <h3>考试也支持</h3>
+          <p>除作业外另开「考试」标签页。已完成的可直达电脑版查看试卷；未交卷的只打开课程考试列表，由学习通自己处理进入考试（考试码 / 验证码 / 人脸），扩展不代答、不代交。</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 a10 10 0 1 0 10 10"/><path d="M12 6 V12 L16 14"/></svg></div>
+          <h3>实时刷新</h3>
+          <p>提交完一项回到面板点一下「刷新」，已完成的作业立刻归位、状态从「未提交」变绿。</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L4 5 V11 c0 5 3.5 9 8 11 c4.5 -2 8 -6 8 -11 V5 Z"/></svg></div>
+          <h3>本地优先</h3>
+          <p>作业、课程与账号信息不上传到作者服务器。匿名使用统计仅含事件名和版本号，首次打开披露条 10 秒内未操作视为接受，详见<a href="privacy.html">隐私政策</a>。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== How to use ========== -->
+    <section id="howto">
+      <h2>三步上手</h2>
+      <p class="sub">从安装到第一次打开电脑版作业，整个流程不超过一分钟。</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>安装扩展</h3>
+          <p>从 Edge / Chrome 浏览器附加组件商店搜索「学习通作业聚合」，点「获取」一键安装。</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>登录学习通</h3>
+          <p>可在扩展面板内登录，也可先打开学习通网页版（账号密码 / 扫码均可）。面板登录若勾选「记住」，凭据只加密存在本机。</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>点击工具栏图标</h3>
+          <p>点浏览器右上角的扩展图标，会在新标签页打开聚合面板，刷新即可拉取当学期所有作业 / 考试。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Privacy / Permissions ========== -->
+    <section id="privacy">
+      <h2>权限透明</h2>
+      <p class="sub">未申请 tabs / storage / cookies 权限；host 权限只用于学习通功能与匿名使用统计。</p>
+      <div class="privacy">
+        <h3>申请的权限说明</h3>
+        <p>清单里没有 <code>tabs</code> / <code>storage</code> / <code>cookies</code>。工具栏点击时，service worker 只用浏览器给扩展自身页面的能力开关本扩展的标签，不会读取你的其他网页。作业缓存、界面偏好、统计同意都写在扩展页本地存储里。</p>
+        <p><code>https://*.chaoxing.com/*</code> · 读取你本人的作业 / 考试列表，并在该域完成登录。登录、作业、考试接口分布在多个子域，打开链接时还可能 302，所以使用通配子域而不是写死单个主机。</p>
+        <p><code>https://ssl.dagongren.tech/event</code> · 匿名使用统计上报（事件名 + 扩展版本）。首次打开 10 秒内未操作视为接受，可点「不再发送」退出。</p>
+        <p style="margin-top:14px;"><strong>不会做的事：</strong>不读取非学习通域的页面、不把作业内容 / 课程名 / 账号密码发给作者服务器、不代答或代交、不在后台长期驻留运行。完整说明见<a href="privacy.html">隐私政策</a>。</p>
+      </div>
+    </section>
+
+    <!-- ========== FAQ ========== -->
+    <section id="faq">
+      <h2>常见问题</h2>
+      <p class="sub">如果你遇到了其他问题，欢迎通过商店页面的反馈渠道联系作者。</p>
+      <div class="faq">
+        <details class="faq-item">
+          <summary>支持哪些浏览器？</summary>
+          <div class="ans">Manifest V3 标准扩展，Edge / Chrome / 其他 Chromium 内核浏览器（如 360 极速、QQ 浏览器等）均可安装使用。Firefox 因 MV3 实现差异暂未保证兼容。</div>
+        </details>
+        <details class="faq-item">
+          <summary>打开作业后提示「未登录」怎么办？</summary>
+          <div class="ans">请先在浏览器里手动打开 <code>https://mooc2-ans.chaoxing.com/visit/interaction</code> 等学习通页面，确保登录态生效，再回到聚合面板点「刷新」即可。</div>
+        </details>
+        <details class="faq-item">
+          <summary>有些作业显示「手机版」是正常的吗？</summary>
+          <div class="ans">是的。少数作业在电脑版集合页里找不到对应链接，扩展会自动回退到手机版作答页，避免打不开。其他大部分作业都会优先电脑版直达。</div>
+        </details>
+        <details class="faq-item">
+          <summary>会影响学习通账号安全吗？</summary>
+          <div class="ans">扩展只在学习通官方域内用浏览器自动携带 cookie 的方式调用页面接口，等同于你自己在浏览器里操作，不会修改账号信息。你可以先在网页版登录，扩展只复用该登录态、不接触密码。可选的「记住并自动登录」会把凭据加密存在本机 IndexedDB，不会上传到作者服务器；匿名使用统计不含账号、课程或作业内容。本扩展非学习通官方，与超星集团无关。</div>
+        </details>
+        <details class="faq-item">
+          <summary>更新方式？</summary>
+          <div class="ans">商店渠道会自动更新；也可以在 <code>chrome://extensions</code> 开启「开发者模式」后手动加载解压后的文件夹进行本地调试。</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ========== Final CTA ========== -->
+    <section style="text-align:center; padding:48px 0 32px;">
+      <h2>现在就把繁杂的作业列表收拢起来</h2>
+      <p class="sub">免费、轻量、只做一件事。</p>
+      <div class="cta-row" style="justify-content:center;">
+        <a class="btn btn-primary" id="downloadBtn2" href="https://microsoftedge.microsoft.com/addons/detail/ocagfglinciobakiaicbfnnnfpffhnmb" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 V15 M7 10 L12 15 L17 10 M5 21 H19"/></svg>
+          前往 Edge 商店安装
+        </a>
+      </div>
+    </section>
+
+    <!-- ========== Footer ========== -->
+    <footer>
+      <div class="links">
+        <a href="#features">功能</a>
+        <a href="#howto">使用</a>
+        <a href="#privacy">权限</a>
+        <a href="privacy.html">隐私政策</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div>学习通作业聚合 · v1.1.16 · 仅供学习辅助使用</div>
+      <div style="margin-top:6px;">本站点非学习通官方，与超星集团无关。</div>
+    </footer>
+  </div>
+</body>
+</html>

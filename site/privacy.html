@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>隐私政策 · 学习通作业聚合</title>
+  <meta name="description" content="学习通作业聚合扩展的隐私政策：匿名使用统计范围、凭据本地存储与撤回方式。" />
+  <meta name="theme-color" content="#1496ff" />
+  <link rel="icon" type="image/png" href="icon128.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    :root {
+      --bg-base: #eef4f9;
+      --text: #12304a;
+      --text-secondary: #4d6680;
+      --text-muted: #7a91a8;
+      --accent: #1496ff;
+      --accent-2: #12c4b0;
+      --accent-soft: rgba(20, 150, 255, 0.12);
+      --line: #cfe0ef;
+      --line-strong: #9ec5e8;
+      --shadow: 0 10px 30px rgba(18, 70, 120, 0.08);
+      --shadow-sm: 0 4px 14px rgba(18, 70, 120, 0.06);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --grad-accent: linear-gradient(135deg, #1496ff, #12c4b0);
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --body-grad:
+        radial-gradient(900px 420px at 8% -10%, rgba(20, 150, 255, 0.16), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.14), transparent 55%),
+        linear-gradient(180deg, #f4f9fd 0%, var(--bg-base) 45%, #e9f1f8 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--body-grad);
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(20, 150, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20, 150, 255, 0.045) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    header.nav {
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text);
+    }
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      box-shadow: 0 6px 16px rgba(20, 150, 255, 0.3);
+    }
+    .brand .plus {
+      background: var(--grad-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      font-size: 14px;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+    }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    section { padding: 36px 0 64px; }
+    section h2 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+    section .sub {
+      text-align: center;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-size: 15px;
+    }
+    .privacy {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(10px);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .privacy h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .privacy h3:not(:first-child) { margin-top: 22px; }
+    .privacy p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 10px; }
+    .privacy code {
+      background: rgba(20, 150, 255, 0.08);
+      color: #0b63ce;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    }
+    footer {
+      padding: 40px 0 50px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--text-secondary); }
+    footer .links {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 768px) {
+      header.nav { padding: 18px 0; }
+      .nav-links { display: none; }
+      section { padding: 28px 0 44px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="nav">
+      <div class="brand">
+        <img src="icon128.png" alt="logo" />
+        <span>学习通<span class="plus">作业</span>聚合</span>
+      </div>
+      <nav class="nav-links">
+        <a href="index.html#features">功能</a>
+        <a href="index.html#howto">使用方法</a>
+        <a href="index.html#privacy">权限</a>
+        <a href="privacy.html">隐私政策</a>
+        <a href="index.html#faq">FAQ</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>隐私政策</h2>
+      <p class="sub">适用于「学习通作业聚合」浏览器扩展。最近更新与当前版本一致。</p>
+      <div class="privacy">
+        <h3>收集范围</h3>
+        <p>从你首次打开扩展起（除非你点「不再发送」），扩展会向作者服务器 <code>https://ssl.dagongren.tech/event</code> 发送匿名使用事件。JSON 载荷只有：</p>
+        <p><code>{"event":"feature_used","version":"&lt;扩展版本&gt;","feature":"app_open"}</code> 或 <code>{"event":"error","version":"&lt;扩展版本&gt;","error":"login_failed"}</code>。</p>
+        <p><code>feature</code> 枚举：<code>app_open</code>、<code>login</code>、<code>fetch_works</code>、<code>fetch_exams</code>、<code>open_work</code>、<code>open_exam</code>、<code>refresh</code>、<code>hide_item</code>、<code>restore_item</code>。<code>error</code> 枚举：<code>login_failed</code> / <code>need_login</code> / <code>request_failed</code>。</p>
+        <p>JSON <strong>不含</strong>手机号、密码、课程名、作业标题、答卷内容、页面 URL，也不写入 <code>install_id</code> 或其他持久客户端 ID。HTTPS 连接本身仍会让服务器看到你的 IP、User-Agent 和扩展页 Origin，这些不在 JSON 里，也无法从本机关掉。</p>
+
+        <h3>用途</h3>
+        <p>了解功能使用量和登录 / 请求失败情况，便于排错和判断哪些功能值得保留。统计数据不用于广告、画像或向第三方出售。</p>
+
+        <h3>留存期限</h3>
+        <p>服务端匿名事件保留最多 18 个月，之后删除或只保留聚合计数。本机同意状态写在扩展页 <code>localStorage</code>，卸载扩展或清除该站点数据后即消失。</p>
+
+        <h3>撤回方式</h3>
+        <p>首次打开时的披露条可选「不再发送」；披露条出现 10 秒内未操作视为接受并不再提示。之后可清除扩展页站点数据或卸载扩展。因为没有用户标识，已经发出的匿名事件无法按人删除。</p>
+
+        <h3>第三方接收方</h3>
+        <p><code>ssl.dagongren.tech</code> 是作者用于接收上述匿名事件的端点，仅此用途。本站 <code>refree.rth1.xyz</code> 只托管落地页和本隐私政策，不接收扩展上报。作业、考试、登录请求只发给 <code>*.chaoxing.com</code>。</p>
+        <p>扩展内「留言反馈」会打开金山文档表单 <code>f.wps.cn</code>。那是你主动点击后的导航，扩展不会自动向金山发送数据；该表单受金山自己的隐私政策约束。</p>
+
+        <h3>本机保存的登录凭据与课程缓存</h3>
+        <p>你可以只复用浏览器里已有的学习通登录态，不必在扩展里输入密码。若选择在扩展内登录并勾选「记住并自动登录」，手机号和密码用 AES-GCM 加密写入本机 IndexedDB，密钥标记为不可导出。这只能避免明文落盘，不能防止同源脚本解密——扩展没有第二把用户密钥。凭据只用于向 <code>passport2.chaoxing.com/fanyalogin</code> 提交，不会进入统计通道。不勾选则不保存。旧版曾把明文写在 <code>localStorage</code>，当前版本读取后会立刻删除该明文键。</p>
+        <p>作业 / 考试标题、课程名、截止时间和打开用的链接会缓存在本机扩展页 <code>localStorage</code>，方便下次秒开；这些缓存不上传到作者服务器。</p>
+
+        <h3>联系方式</h3>
+        <p>通过扩展内「留言反馈」，或 Edge 附加组件商店该条目的反馈渠道联系作者。</p>
+      </div>
+    </section>
+
+    <footer>
+      <div class="links">
+        <a href="index.html">首页</a>
+        <a href="index.html#privacy">权限</a>
+        <a href="privacy.html">隐私政策</a>
+      </div>
+      <div>学习通作业聚合 · v1.1.16 · 仅供学习辅助使用</div>
+      <div style="margin-top:6px;">本站点非学习通官方，与超星集团无关。</div>
+    </footer>
+  </div>
+</body>
+</html>
