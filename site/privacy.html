@@ -176,7 +176,7 @@
       <p class="sub">适用于「学习通作业聚合」浏览器扩展。最近更新与当前版本一致。</p>
       <div class="privacy">
         <h3>收集范围</h3>
-        <p>从你首次打开扩展起（除非你点「不再发送」），扩展会向作者服务器 <code>https://ssl.dagongren.tech/event</code> 发送匿名使用事件。JSON 载荷只有：</p>
+        <p>首次打开扩展时，须在欢迎页点「同意并继续」后，才会向作者服务器 <code>https://ssl.dagongren.tech/event</code> 发送匿名使用事件；点「不同意」则不发送。JSON 载荷只有：</p>
         <p><code>{"event":"feature_used","version":"&lt;扩展版本&gt;","feature":"app_open"}</code> 或 <code>{"event":"error","version":"&lt;扩展版本&gt;","error":"login_failed"}</code>。</p>
         <p><code>feature</code> 枚举：<code>app_open</code>、<code>login</code>、<code>fetch_works</code>、<code>fetch_exams</code>、<code>open_work</code>、<code>open_exam</code>、<code>refresh</code>、<code>hide_item</code>、<code>restore_item</code>。<code>error</code> 枚举：<code>login_failed</code> / <code>need_login</code> / <code>request_failed</code>。</p>
         <p>JSON <strong>不含</strong>手机号、密码、课程名、作业标题、答卷内容、页面 URL，也不写入 <code>install_id</code> 或其他持久客户端 ID。HTTPS 连接本身仍会让服务器看到你的 IP、User-Agent 和扩展页 Origin，这些不在 JSON 里，也无法从本机关掉。</p>
@@ -188,7 +188,7 @@
         <p>服务端匿名事件保留最多 18 个月，之后删除或只保留聚合计数。本机同意状态写在扩展页 <code>localStorage</code>，卸载扩展或清除该站点数据后即消失。</p>
 
         <h3>撤回方式</h3>
-        <p>首次打开时的披露条可选「不再发送」；披露条出现 10 秒内未操作视为接受并不再提示。之后可清除扩展页站点数据或卸载扩展。因为没有用户标识，已经发出的匿名事件无法按人删除。</p>
+        <p>欢迎页点「同意并继续」后不再提示；点「不同意」则不发送匿名事件，且无法使用扩展，下次打开仍须同意。已同意后可清除扩展页站点数据或卸载扩展。因为没有用户标识，已经发出的匿名事件无法按人删除。</p>
 
         <h3>第三方接收方</h3>
         <p><code>ssl.dagongren.tech</code> 是作者用于接收上述匿名事件的端点，仅此用途。本站 <code>refree.rth1.xyz</code> 只托管落地页和本隐私政策，不接收扩展上报。作业、考试、登录请求只发给 <code>*.chaoxing.com</code>。</p>
@@ -209,7 +209,7 @@
         <a href="index.html#privacy">权限</a>
         <a href="privacy.html">隐私政策</a>
       </div>
-      <div>学习通作业聚合 · v1.1.16 · 仅供学习辅助使用</div>
+      <div>学习通作业聚合 · v1.1.17 · 仅供学习辅助使用</div>
       <div style="margin-top:6px;">本站点非学习通官方，与超星集团无关。</div>
     </footer>
   </div>

@@ -101,10 +101,12 @@ function log(...args) {
 }
 
 // 匿名遥测：只发 event / feature / version，不含账号、课程、作业内容。
-// 默认上报，点「不再发送」退出；10 秒未操作视为接受并不再提示。
+// 未同意则必须在欢迎页确认；已 allow 不再提示。
 const TELEMETRY_URL = "https://ssl.dagongren.tech/event";
 const TELEMETRY_CONSENT_KEY = "chaoxing.telemetry.consent.v1";
 let cachedManifestVersion = null;
+// 同意回调只允许触发一次 continueBootstrap，防止连点重复进入
+let agreedStarted = false;
 
 function readTelemetryConsent() {
   try {
@@ -149,21 +151,33 @@ function track(event, fields = {}) {
   } catch (e) {}
 }
 
-function setupTelemetryBanner() {
-  if (readTelemetryConsent()) return;
-  const banner = $("#telemetryBanner");
-  const allowBtn = $("#telemetryAllow");
-  const denyBtn = $("#telemetryDeny");
-  if (!banner) return;
-  banner.hidden = false;
-  let timer = setTimeout(() => choose("allow"), 10000);
-  const choose = value => {
-    clearTimeout(timer);
-    writeTelemetryConsent(value);
-    banner.hidden = true;
-  };
-  if (allowBtn) allowBtn.addEventListener("click", () => choose("allow"));
-  if (denyBtn) denyBtn.addEventListener("click", () => choose("deny"));
+// 欢迎协议门禁：返回 true 表示弹出了遮罩（调用方须停止启动流程）。
+// 已 allow 返回 false；找不到遮罩元素也返回 false（不拦）。函数本身不拉数据。
+function setupAgreement() {
+  if (readTelemetryConsent() === "allow") return false;
+  const overlay = $("#agreementOverlay");
+  if (!overlay) return false;
+  overlay.hidden = false;
+  const blocked = $("#agreementBlocked");
+  if (readTelemetryConsent() === "deny" && blocked) blocked.hidden = false;
+  const confirmBtn = $("#agreementConfirm");
+  const denyBtn = $("#agreementDeny");
+  if (confirmBtn && !confirmBtn.dataset.bound) {
+    confirmBtn.dataset.bound = "1";
+    confirmBtn.addEventListener("click", () => {
+      writeTelemetryConsent("allow");
+      overlay.hidden = true;
+      continueBootstrap();
+    });
+  }
+  if (denyBtn && !denyBtn.dataset.bound) {
+    denyBtn.dataset.bound = "1";
+    denyBtn.addEventListener("click", () => {
+      writeTelemetryConsent("deny");
+      if (blocked) blocked.hidden = false;
+    });
+  }
+  return true;
 }
 
 // ============ 请求 ============
@@ -2132,10 +2146,17 @@ const ensureExams = createEnsure("exam", {
 
 // 打开页面：按上次保存的页签加载对应数据（作业 / 考试 / 已隐藏）。
 // 90 秒内命中缓存时 ensureWorks/ensureExams 会直接返回，全程 0 请求。
-// 各分支内部都会自行 render，这里先按已恢复的筛选/排序画一帧空态。
 async function bootstrap() {
+  if (setupAgreement()) return; // 未同意：遮罩已弹出，禁止 track / render / 拉数据
+  continueBootstrap();
+}
+
+// 同意协议后（或已 allow）才执行的启动逻辑；由同意回调与 bootstrap 调用。
+// 各分支内部都会自行 render，这里先按已恢复的筛选/排序画一帧空态。
+async function continueBootstrap() {
+  if (agreedStarted) return;
+  agreedStarted = true;
   log("======== 打开页面 ========");
-  setupTelemetryBanner();
   track("feature_used", { feature: "app_open" });
   render();
   if (activeTab === "exam") {

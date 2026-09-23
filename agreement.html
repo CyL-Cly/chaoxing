@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>用户协议 · 学习通作业聚合</title>
+  <style>
+    :root {
+      --text: #12304a;
+      --text-secondary: #4d6680;
+      --text-muted: #7a91a8;
+      --accent: #1496ff;
+      --line: #cfe0ef;
+      --radius: 14px;
+      --shadow-sm: 0 4px 14px rgba(18, 70, 120, 0.06);
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --body-grad:
+        radial-gradient(900px 420px at 8% -10%, rgba(20, 150, 255, 0.16), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.14), transparent 55%),
+        linear-gradient(180deg, #f4f9fd 0%, #eef4f9 45%, #e9f1f8 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--body-grad);
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      max-width: 720px;
+      width: 100%;
+    }
+    h1 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 18px; letter-spacing: -0.3px; }
+    h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    h3:not(:first-of-type) { margin-top: 20px; }
+    p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>用户协议</h1>
+    <h3>一、基本功能</h3>
+    <p>本扩展提供作业、考试列表作为基本功能。</p>
+    <h3>二、作业与考试信息</h3>
+    <p>为提供列表刷新、未完成筛选和电脑版打开，扩展会在学习通网站内读取已登录账号的作业与考试信息，并只保存在本机。</p>
+    <h3>三、数据收集</h3>
+    <p>使用过程中会向作者服务器发送匿名事件（事件名和版本号），不含账号、课程和作业内容，用于了解使用情况和排错。详见<a href="https://refree.rth1.xyz/privacy.html" target="_blank" rel="noopener noreferrer">隐私政策</a>。</p>
+  </main>
+</body>
+</html>

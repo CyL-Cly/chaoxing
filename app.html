@@ -85,15 +85,6 @@
         <span id="loadingText">正在逐科目检查作业…</span>
       </div>
 
-      <!-- 首次运行：匿名使用统计披露。默认上报，点「不再发送」退出；10 秒未操作视为接受并不再提示。 -->
-      <div id="telemetryBanner" class="telemetry-banner" hidden>
-        <span class="telemetry-banner-text">本扩展会向作者服务器发送匿名使用事件（事件名 + 版本号，不含账号、课程、作业内容）。<a id="telemetryPrivacyLink" href="https://refree.rth1.xyz/privacy.html" target="_blank" rel="noopener noreferrer">隐私政策</a> 10 秒内未操作将不再提示。</span>
-        <span class="telemetry-banner-actions">
-          <button type="button" id="telemetryAllow" class="btn small">知道了</button>
-          <button type="button" id="telemetryDeny" class="btn small">不再发送</button>
-        </span>
-      </div>
-
       <!-- 未登录：盖住右侧内容区，不挡左侧导航 -->
       <div id="loginCard" class="login-overlay" style="display:none">
         <form id="loginForm" class="login-panel" autocomplete="on">
@@ -120,6 +111,22 @@
   <div id="status" class="status">加载中…</div>
 
   <div id="error" class="error" style="display:none;"></div>
+
+  <!-- 首次打开的欢迎协议门禁：未同意前拦住整个页面；已同意（allow）不再弹出 -->
+  <div id="agreementOverlay" class="agreement-overlay" hidden>
+    <div class="agreement-panel">
+      <img class="agreement-logo" src="icon128.png" alt="" />
+      <div class="agreement-hello">欢迎使用</div>
+      <h2 class="agreement-title">学习通作业聚合</h2>
+      <p class="agreement-desc">汇总本学期作业和考试，在电脑上打开作答页。</p>
+      <p class="agreement-linkline">详情请查看<a id="agreementLink" href="https://refree.rth1.xyz/agreement.html" target="_blank" rel="noopener noreferrer">《用户协议》</a></p>
+      <div class="agreement-actions">
+        <button type="button" id="agreementConfirm" class="control-button primary-btn">同意并继续</button>
+        <button type="button" id="agreementDeny" class="control-button">不同意</button>
+      </div>
+      <p id="agreementBlocked" class="agreement-blocked" hidden>未同意用户协议，无法使用</p>
+    </div>
+  </div>
 
   <!-- 纯工具函数先于 app.js 引入（经典脚本，挂全局；见 tests.js 的单测） -->
   <script src="app.util.js"></script>

@@ -964,59 +964,111 @@ aside nav ul li button.tab .tab-label {
 }
 
 /* ---------- 后台静默刷新提示（非阻塞） ---------- */
-.refresh-pill,
-.telemetry-banner {
+.refresh-pill {
     position: absolute;
     left: 50%;
     bottom: 18px;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
     color: var(--text-secondary);
     background: var(--bg-panel);
     border: 1px solid var(--line);
     box-shadow: var(--shadow);
     backdrop-filter: blur(10px);
-}
-
-.refresh-pill {
-    gap: 8px;
-    padding: 7px 14px;
-    font-size: 12px;
     border-radius: 999px;
     /* 不拦截点击：刷新期间列表仍可正常操作 */
     pointer-events: none;
     z-index: 9;
 }
 
-.telemetry-banner {
-    gap: 12px;
-    max-width: calc(100% - 36px);
-    padding: 10px 14px;
-    font-size: 12px;
-    line-height: 1.55;
-    border-radius: 14px;
-    z-index: 10;
+/* ---------- 欢迎协议门禁 ---------- */
+.agreement-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(240, 242, 245, 0.92);
 }
 
-.telemetry-banner[hidden] {
+.agreement-overlay[hidden] {
     display: none !important;
 }
 
-.telemetry-banner-text {
-    min-width: 0;
-    flex: 1;
+.agreement-panel {
+    width: 100%;
+    max-width: 420px;
+    padding: 28px;
+    text-align: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
 }
 
-.telemetry-banner-text a {
+.agreement-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    box-shadow: 0 6px 16px rgba(20, 150, 255, 0.3);
+}
+
+.agreement-hello {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.agreement-title {
+    margin: 4px 0 8px;
+    font-size: 22px;
+    font-weight: 650;
+    color: var(--text);
+}
+
+.agreement-desc {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.agreement-linkline {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.agreement-linkline a {
     color: var(--accent);
-    margin-left: 4px;
 }
 
-.telemetry-banner-actions {
+.agreement-actions {
     display: flex;
-    flex-shrink: 0;
-    gap: 6px;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.agreement-actions .control-button {
+    width: 100%;
+}
+
+.agreement-blocked {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+.agreement-blocked[hidden] {
+    display: none !important;
 }
 
 .refresh-pill-spinner {
