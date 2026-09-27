@@ -952,6 +952,12 @@ aside nav ul li button.tab .tab-label {
     margin-left: auto;
 }
 
+/* 「已隐藏」页签会把 .filter（含 fx-toggle）整体隐藏（app.js），
+   复选框一消失 margin-left:auto 随之失效，此时由提示自己顶到最右 */
+.toolbar:has(> .fx-toggle[style*="none"]) .cache-hint {
+    margin-left: auto;
+}
+
 /* 数据已过 90 秒（缓存过期）时转为提醒配色 */
 .cache-hint.stale {
     color: var(--badge-review-color);
