@@ -946,8 +946,8 @@ aside nav ul li button.tab .tab-label {
     border-radius: 999px;
 }
 
-/* 关闭蔚蓝档案效果：margin-left:auto 把自己推到工具条最右，
-   数据时间提示（#cacheHint）紧贴它左侧；提示隐藏时复选框仍单独靠右 */
+/* 关闭蔚蓝档案效果：margin-left:auto 把自己及其后的元素推到工具条右侧，
+   数据时间提示（#cacheHint）排在它后面、位于最右；提示隐藏时复选框仍单独靠右 */
 .fx-toggle {
     margin-left: auto;
 }
