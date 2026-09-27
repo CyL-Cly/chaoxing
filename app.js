@@ -1836,10 +1836,12 @@ function writeUiPrefs() {
       searchQuery: searchEl ? searchEl.value : ""
     };
     // 停留在「高级」时不改写页签，避免刷新后落到作业页
+    const prev = readUiPrefs();
     if (!VALID_TAB.has(activeTab)) {
-      const prev = readUiPrefs();
       if (prev && VALID_TAB.has(prev.activeTab)) payload.activeTab = prev.activeTab;
     }
+    // fxOff 由 app.fx.js（点击特效开关）读写同一键，这里原样保留，避免覆盖
+    if (prev && prev.fxOff === true) payload.fxOff = true;
     writeJsonStorage(UI_PREFS_KEY, payload, { label: "界面偏好写入失败（本次会话仍生效）" });
   } catch (e) {
     log("✗ 界面偏好写入失败（本次会话仍生效）:", e.message);

@@ -933,6 +933,7 @@ aside nav ul li button.tab .tab-label {
 
 /* ---------- 工具栏右侧：数据获取时间提示 ---------- */
 .cache-hint {
+    /* 与右侧的「关闭蔚蓝档案效果」复选框成组推到工具条最右 */
     margin-left: auto;
     display: inline-flex;
     align-items: center;
@@ -945,6 +946,11 @@ aside nav ul li button.tab .tab-label {
     background: var(--tag-bg);
     border: 1px solid var(--tag-border);
     border-radius: 999px;
+}
+
+/* 关闭蔚蓝档案效果：紧贴数据时间提示左侧，随它一起靠右 */
+.fx-toggle {
+    margin-left: 0;
 }
 
 /* 数据已过 90 秒（缓存过期）时转为提醒配色 */
