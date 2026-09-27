@@ -131,5 +131,7 @@
   <!-- 纯工具函数先于 app.js 引入（经典脚本，挂全局；见 tests.js 的单测） -->
   <script src="app.util.js"></script>
   <script src="app.js"></script>
+  <!-- 点击特效（ES module，自包含本地库，延迟执行不影响主逻辑） -->
+  <script type="module" src="app.fx.js"></script>
 </body>
 </html>

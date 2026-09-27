@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>用户协议 · 学习通作业聚合</title>
-  <style>
+    <style>
     :root {
+      color-scheme: light dark;
       --text: #12304a;
       --text-secondary: #4d6680;
       --text-muted: #7a91a8;
@@ -14,10 +15,26 @@
       --radius: 14px;
       --shadow-sm: 0 4px 14px rgba(18, 70, 120, 0.06);
       --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --card-bg: rgba(255, 255, 255, 0.86);
       --body-grad:
         radial-gradient(900px 420px at 8% -10%, rgba(20, 150, 255, 0.16), transparent 60%),
         radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.14), transparent 55%),
         linear-gradient(180deg, #f4f9fd 0%, #eef4f9 45%, #e9f1f8 100%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #d9e6f2;
+        --text-secondary: #9fb5c9;
+        --text-muted: #6f879c;
+        --accent: #3aa4ff;
+        --line: #223548;
+        --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.32);
+        --card-bg: rgba(17, 28, 41, 0.86);
+        --body-grad:
+          radial-gradient(900px 420px at 8% -10%, rgba(58, 164, 255, 0.09), transparent 60%),
+          radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.07), transparent 55%),
+          linear-gradient(180deg, #101b28 0%, #0c141d 45%, #0a121b 100%);
+      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -34,7 +51,7 @@
       padding: 24px;
     }
     .card {
-      background: rgba(255, 255, 255, 0.86);
+      background: var(--card-bg);
       border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 28px;

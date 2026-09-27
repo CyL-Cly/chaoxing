@@ -7,7 +7,7 @@ publish.py —— 学习通作业聚合扩展的发布打包脚本
   1. 读取并校验源 manifest.json（必须是合法的 MV3 扩展清单）
   2. 自动递增 patch 版本号（如 1.0.0 -> 1.0.1），写回源 manifest.json 与发布包
   3. 调用 terser 压缩 app.js 与 background.js（只 compress、不 mangle，便于商店审核阅读）
-  4. 复制 app.css / app.html / icon128.png 到 dist/（app.html / app.css 剥离注释）
+  4. 复制 app.css / app.html / icon128.png / ba-click-fx.js / app.fx.js 到 dist/（app.html / app.css 剥离注释）
   5. 校验发布包文件齐全、manifest 合法、压缩 JS 非空
   6. 将 dist/ 打成可上传微软商店的 .zip
   7. 同步 site/index.html 与 site/privacy.html 中的版本号（不打进 zip）
@@ -29,7 +29,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC_MANIFEST = os.path.join(ROOT, "manifest.json")
 DIST_DIR = os.path.join(ROOT, "dist")
 # 需要原样复制的资源文件（JS 单独压缩，不在此列）
-ASSET_FILES = ["app.css", "app.html", "icon128.png"]
+# ba-click-fx.js / app.fx.js：第三方点击特效库与其 ESM 入口，均为模块脚本，
+# terser 无 module 解析模式且二者无需压缩，故按资源原样复制。
+ASSET_FILES = ["app.css", "app.html", "icon128.png", "ba-click-fx.js", "app.fx.js"]
 # 需要原样复制的目录（含子目录整体复制，如语言包）
 COPY_DIRS = ["_locales"]
 # 需要压缩的 JS 文件

@@ -1,10 +1,13 @@
 /* ============================================================
-   学习通作业聚合 · 浅色 UI
+   学习通作业聚合 · 明暗双主题 UI
    风格参考：闲鱼订阅 Plus（青蓝 / 电青，玻璃拟态）
    主色：#1496ff 青蓝 / #12c4b0 电青
+   深色主题：文件末尾 prefers-color-scheme: dark 覆盖块，随系统自动切换
    ============================================================ */
 
 :root {
+    /* 声明支持双主题：原生控件（select 下拉、checkbox、search）随系统渲染 */
+    color-scheme: light dark;
     /* ---- 基础色板 ---- */
     --bg-base: #eef4f9;
     --bg-panel: rgba(255, 255, 255, 0.86);
@@ -18,6 +21,9 @@
     --accent-soft: rgba(20, 150, 255, 0.12);
     --danger: #ff5a5f;
     --danger-soft: #fff1f1;
+    --danger-border: rgba(255, 90, 95, 0.35);
+    /* 遮罩纱色：登录卡 / 加载遮罩 / 协议门禁共用的半透明底 */
+    --veil: rgba(240, 242, 245, 0.92);
     --ok: #12b886;
     --ok-soft: #e8faf3;
     --warn: #f59f00;
@@ -47,7 +53,7 @@
     --btn-disabled-bg: #d7e2ec;
     --btn-disabled-color: #8aa0b5;
     --card-grad: linear-gradient(180deg, #ffffff, #f8fcff);
-    --row-even: rgba(20, 150, 255, 0.025);
+    --row-even: rgba(255, 255, 255, 0.6);
     --row-hover: rgba(20, 150, 255, 0.05);
     --tag-bg: #e8f3ff;
     --tag-border: #b7d8ff;
@@ -516,7 +522,7 @@ aside nav ul li button.tab .tab-label {
     padding: 14px 16px;
     color: var(--danger);
     background: var(--danger-soft);
-    border: 1px solid rgba(255, 90, 95, 0.35);
+    border: 1px solid var(--danger-border);
     border-left: 4px solid var(--danger);
     border-radius: 8px;
     line-height: 1.7;
@@ -533,7 +539,7 @@ aside nav ul li button.tab .tab-label {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(240, 242, 245, 0.92);
+    background: var(--veil);
 }
 
 .login-panel {
@@ -600,7 +606,7 @@ aside nav ul li button.tab .tab-label {
     padding: 8px 10px;
     color: var(--danger);
     background: var(--danger-soft);
-    border: 1px solid rgba(255, 90, 95, 0.35);
+    border: 1px solid var(--danger-border);
     border-radius: 8px;
     font-size: 12px;
     line-height: 1.6;
@@ -684,7 +690,7 @@ aside nav ul li button.tab .tab-label {
 }
 
 .work-item:nth-child(even) {
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--row-even);
 }
 
 .work-item:hover {
@@ -953,7 +959,7 @@ aside nav ul li button.tab .tab-label {
     /* 只覆盖右侧内容区，不遮左侧导航与底部状态栏 */
     position: absolute;
     inset: 0;
-    background: rgba(240, 242, 245, 0.92);
+    background: var(--veil);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -994,7 +1000,7 @@ aside nav ul li button.tab .tab-label {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(240, 242, 245, 0.92);
+    background: var(--veil);
 }
 
 .agreement-overlay[hidden] {
@@ -1262,5 +1268,70 @@ aside nav ul li button.tab .tab-label {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================
+   深色主题：随系统自动切换（仅覆盖变量，不改布局）
+   思路：深夜蓝底 + 半透明彩色底徽章 + 提亮文字与边框
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-base: #0c141d;
+        --bg-panel: rgba(17, 28, 41, 0.86);
+        --bg-input: #0d1824;
+        --line: #223548;
+        --line-strong: #3a5570;
+        --text: #d9e6f2;
+        --text-secondary: #9fb5c9;
+        --text-muted: #6f879c;
+        --accent: #3aa4ff;
+        --accent-soft: rgba(58, 164, 255, 0.14);
+        --danger: #ff7076;
+        --danger-soft: rgba(255, 90, 95, 0.12);
+        --danger-border: rgba(255, 90, 95, 0.45);
+        --ok: #2fd39e;
+        --ok-soft: rgba(18, 184, 134, 0.13);
+        --warn: #ffb340;
+        --warn-soft: rgba(245, 159, 0, 0.13);
+        /* 遮罩纱色换深色，保留透出底层内容的磨砂感 */
+        --veil: rgba(9, 16, 25, 0.88);
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.32);
+        --body-grad:
+            radial-gradient(900px 420px at 8% -10%, rgba(58, 164, 255, 0.09), transparent 60%),
+            radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.07), transparent 55%),
+            linear-gradient(180deg, #101b28 0%, var(--bg-base) 45%, #0a121b 100%);
+        --grid-line: rgba(58, 164, 255, 0.05);
+        --aside-bg: linear-gradient(180deg, rgba(16, 26, 40, 0.94), rgba(12, 20, 30, 0.92));
+        --brand-logo-bg: #10202e;
+        --nav-hover-border: rgba(58, 164, 255, 0.2);
+        --nav-active-text: #7fc3ff;
+        --nav-active-bg: linear-gradient(90deg, rgba(58, 164, 255, 0.16), rgba(18, 196, 176, 0.09));
+        --nav-active-border: rgba(58, 164, 255, 0.32);
+        --btn-bg: linear-gradient(180deg, #16283a, #101d2b);
+        --btn-hover-text: #7fc3ff;
+        --btn-disabled-bg: #1b2735;
+        --btn-disabled-color: #5b7085;
+        --card-grad: linear-gradient(180deg, #142433, #101c29);
+        --row-even: rgba(255, 255, 255, 0.03);
+        --row-hover: rgba(58, 164, 255, 0.08);
+        --tag-bg: rgba(58, 164, 255, 0.12);
+        --tag-border: rgba(58, 164, 255, 0.35);
+        --tag-color: #8cc8ff;
+        --badge-pending-color: #ff8589;
+        --badge-pending-bg: rgba(231, 76, 60, 0.15);
+        --badge-pending-border: rgba(231, 76, 60, 0.4);
+        --badge-review-color: #ffc35c;
+        --badge-review-bg: rgba(245, 159, 0, 0.15);
+        --badge-review-border: rgba(245, 159, 0, 0.4);
+        --badge-done-color: #3fd9ac;
+        --badge-done-bg: rgba(18, 184, 134, 0.15);
+        --badge-done-border: rgba(18, 184, 134, 0.4);
+        --link-type-pc: #2fb380;
+        --link-type-phone: #ff9d57;
+        --filterbar-grad: linear-gradient(180deg, #131f2d, #0f1a26);
+        --scroll-thumb: linear-gradient(180deg, #3a5570, #2e5d5f);
+        --scroll-thumb-hover: linear-gradient(180deg, #4a6a8a, #37736e);
     }
 }

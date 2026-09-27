@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>隐私政策 · 学习通作业聚合</title>
   <meta name="description" content="学习通作业聚合扩展的隐私政策：匿名使用统计范围、凭据本地存储与撤回方式。" />
-  <meta name="theme-color" content="#1496ff" />
+    <meta name="theme-color" content="#1496ff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c141d" media="(prefers-color-scheme: dark)" />
   <link rel="icon" type="image/png" href="icon128.png" />
   <link rel="apple-touch-icon" href="icon128.png" />
-  <style>
+    <style>
     :root {
+      color-scheme: light dark;
       --bg-base: #eef4f9;
       --text: #12304a;
       --text-secondary: #4d6680;
@@ -25,10 +27,37 @@
       --radius-sm: 10px;
       --grad-accent: linear-gradient(135deg, #1496ff, #12c4b0);
       --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --panel-bg: rgba(255, 255, 255, 0.86);
+      --code-bg: rgba(20, 150, 255, 0.08);
+      --code-color: #0b63ce;
+      --grid-line: rgba(20, 150, 255, 0.045);
       --body-grad:
         radial-gradient(900px 420px at 8% -10%, rgba(20, 150, 255, 0.16), transparent 60%),
         radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.14), transparent 55%),
         linear-gradient(180deg, #f4f9fd 0%, var(--bg-base) 45%, #e9f1f8 100%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-base: #0c141d;
+        --text: #d9e6f2;
+        --text-secondary: #9fb5c9;
+        --text-muted: #6f879c;
+        --accent: #3aa4ff;
+        --accent-2: #12c4b0;
+        --accent-soft: rgba(58, 164, 255, 0.14);
+        --line: #223548;
+        --line-strong: #3a5570;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.32);
+        --panel-bg: rgba(17, 28, 41, 0.86);
+        --code-bg: rgba(58, 164, 255, 0.12);
+        --code-color: #8cc8ff;
+        --grid-line: rgba(58, 164, 255, 0.05);
+        --body-grad:
+          radial-gradient(900px 420px at 8% -10%, rgba(58, 164, 255, 0.09), transparent 60%),
+          radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.07), transparent 55%),
+          linear-gradient(180deg, #101b28 0%, var(--bg-base) 45%, #0a121b 100%);
+      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -48,8 +77,8 @@
       z-index: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(20, 150, 255, 0.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(20, 150, 255, 0.045) 1px, transparent 1px);
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
       background-size: 44px 44px;
       mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
       -webkit-mask-image: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.75), transparent 78%);
@@ -114,7 +143,7 @@
       font-size: 15px;
     }
     .privacy {
-      background: rgba(255,255,255,0.86);
+      background: var(--panel-bg);
       border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 28px;
@@ -127,8 +156,8 @@
     .privacy h3:not(:first-child) { margin-top: 22px; }
     .privacy p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 10px; }
     .privacy code {
-      background: rgba(20, 150, 255, 0.08);
-      color: #0b63ce;
+      background: var(--code-bg);
+      color: var(--code-color);
       padding: 1px 6px;
       border-radius: 4px;
       font-size: 13px;
