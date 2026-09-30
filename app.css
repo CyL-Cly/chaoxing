@@ -91,6 +91,8 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    /* 手机浏览器地址栏收展时 100vh 偏大，动态视口高度更准（不支持的浏览器忽略此行） */
+    height: 100dvh;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     background: var(--body-grad);
@@ -291,7 +293,7 @@ aside nav ul li button.tab .tab-label {
     user-select: text;
 }
 
-/* ---------- 主题切换按钮 ---------- */
+/* ---------- 主题切换按钮（侧栏最底 = 页面左下角） ---------- */
 .theme-toggle {
     margin-top: 8px;
     width: 100%;
@@ -304,7 +306,11 @@ aside nav ul li button.tab .tab-label {
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
-    text-align: center;
+    /* 图标 + 文案两个 span 居中排布；手机端只显示图标（见窄屏媒体查询） */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .theme-toggle:hover {
@@ -1201,28 +1207,31 @@ aside nav ul li button.tab .tab-label {
     background-clip: content-box;
 }
 
-/* ---------- Narrow screens ---------- */
+/* ---------- Narrow screens（手机端：顶栏 + 底部胶囊 dock + 左下角主题圆钮） ---------- */
 @media (max-width: 768px) {
     .container {
         flex-direction: column;
     }
 
-    /* 窄屏把侧栏收成顶部横条：页签仍可切换，不再 display:none 整栏 */
+    /* ---- aside 自身脱样式：只做顶栏的定位容器 ----
+       必须去掉 backdrop-filter/背景/边框：backdrop-filter 会让 fixed 后代
+       （底部 dock、左下角主题钮）以 aside 为包含块，视口定位会全部错乱。
+       position:relative 不影响 fixed 后代，仅供顶栏内绝对定位使用。 */
     aside {
+        position: relative;
+        display: block;
         width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px 12px;
-        padding: 10px 12px;
-        border-right: none;
-        border-bottom: 1px solid var(--line);
+        padding: 0;
+        background: none;
+        border: none;
+        backdrop-filter: none;
     }
 
+    /* ---- 顶栏：logo + 名称，右侧挂版本号与反馈图标 ---- */
     .brand {
-        padding: 0;
-        border-bottom: none;
-        gap: 8px;
+        padding: 10px 104px 10px 14px; /* 右侧留出版本号 + 反馈图标钮的位置 */
+        border-bottom: 1px solid var(--line);
+        gap: 10px;
     }
 
     .brand-logo {
@@ -1232,52 +1241,117 @@ aside nav ul li button.tab .tab-label {
     }
 
     .brand-name {
-        font-size: 15px;
+        font-size: 16px;
     }
 
+    /* 反馈入口：顶栏最右的圆形图标钮（隐藏文字） */
+    .feedback-entry {
+        position: absolute;
+        top: 9px;
+        right: 12px;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .feedback-entry span {
+        display: none;
+    }
+
+    /* 版本号：反馈图标左侧小字（保留连点 5 次解锁高级页签的手势） */
+    .version-tag {
+        position: absolute;
+        top: 18px;
+        right: 54px;
+        margin: 0;
+    }
+
+    /* ---- 底部胶囊 dock：页签横排居中悬浮 ---- */
     aside nav {
-        flex: 1;
-        min-width: 0;
+        position: fixed;
+        left: 50%;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        z-index: 40;
+        width: max-content;
+        /* 两侧各留 64px：避开左下角主题圆钮并保持居中观感 */
+        max-width: calc(100vw - 128px);
+        padding: 4px;
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
     }
 
     aside nav ul {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
+        gap: 3px;
+        /* 解锁高级出现 4 个页签、窄屏放不下时可横向滑动 */
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    aside nav ul::-webkit-scrollbar {
+        display: none;
+    }
+
+    aside nav ul li {
+        flex-shrink: 0;
     }
 
     aside nav ul li button.tab {
         width: auto;
         margin-bottom: 0;
-        padding: 8px 12px;
+        padding: 9px 13px;
+        font-size: 13px;
+        border-radius: 999px;
+        justify-content: center;
+        white-space: nowrap;
     }
 
     aside nav ul li button.tab:hover {
         transform: none;
     }
 
+    /* 胶囊内不用左侧竖条高亮，靠青蓝底 pill 即可 */
     aside nav ul li button.tab.active {
-        box-shadow: inset 0 -3px 0 var(--accent);
+        box-shadow: none;
     }
 
-    .feedback-entry {
+    /* ---- 左下角主题圆钮：与 dock 同行，仅显示图标 ---- */
+    .theme-toggle {
+        position: fixed;
+        left: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        z-index: 40;
+        width: 48px;
+        height: 48px;
         margin-top: 0;
-        padding: 8px 12px;
-        width: auto;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 18px;
+        background: var(--bg-panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
     }
 
-    .version-tag {
-        margin-top: 0;
-        text-align: left;
+    .theme-toggle .theme-label {
+        display: none;
     }
 
+    /* ---- 底部让位：内容 / 状态栏 / 刷新胶囊不被 dock 遮挡 ---- */
     .main-scroll {
         padding: 16px;
+        padding-bottom: calc(96px + env(safe-area-inset-bottom));
     }
 
     .status {
         padding-left: 16px;
         padding-right: 16px;
+        /* 状态栏文字抬高到 dock 之上（dock 悬浮在本区域底部空白处） */
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
 
     .toolbar {

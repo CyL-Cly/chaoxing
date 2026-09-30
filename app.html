@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
+  <!-- viewport-fit=cover：让 env(safe-area-inset-bottom) 在全面屏手机上生效（底部 dock 让位） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>学习通作业聚合</title>
   <link rel="stylesheet" href="app.css" />
 </head>
@@ -30,8 +32,9 @@
         <span>留言反馈</span>
       </a>
 
-      <button id="themeToggle" class="theme-toggle" type="button">◐ 跟随系统</button>
       <div id="versionTag" class="version-tag" title="当前扩展版本">v—</div>
+      <!-- 左下角主题切换：桌面端为侧栏最底按钮；手机端 fixed 到视口左下角圆形图标钮（见 app.css） -->
+      <button id="themeToggle" class="theme-toggle" type="button"><span class="theme-icon">◐</span><span class="theme-label">跟随系统</span></button>
     </aside>
 
     <main id="main" class="main-area">

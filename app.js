@@ -2481,9 +2481,12 @@ function cycleTheme() {
 function updateThemeBtn(mode) {
   const btn = $("#themeToggle");
   if (!btn) return;
-  const map = { light: "☀ 浅色", dark: "☾ 深色", system: "◐ 跟随系统" };
-  btn.textContent = map[mode] || map.system;
-  btn.title = "当前主题：" + (map[mode] || map.system) + "（点击切换）";
+  // 图标与文案拆成两个 span：手机端 CSS 只显示图标（左下角圆形钮），桌面端完整显示
+  const map = { light: ["☀", "浅色"], dark: ["☾", "深色"], system: ["◐", "跟随系统"] };
+  const [icon, label] = map[mode] || map.system;
+  btn.innerHTML = '<span class="theme-icon">' + icon + '</span><span class="theme-label">' + label + '</span>';
+  btn.title = "当前主题：" + label + "（点击切换）";
+  btn.setAttribute("aria-label", btn.title);
 }
 
 function setupThemeToggle() {
