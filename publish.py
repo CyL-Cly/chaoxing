@@ -6,8 +6,10 @@ publish.py —— 学习通作业聚合扩展的发布打包脚本
 流程：
   1. 读取并校验源 manifest.json（必须是合法的 MV3 扩展清单）
   2. 自动递增 patch 版本号（如 1.0.0 -> 1.0.1），写回源 manifest.json 与发布包
-  3. 调用 terser 压缩 app.js 与 background.js（只 compress、不 mangle，便于商店审核阅读）
-  4. 复制 app.css / app.html / icon128.png / ba-click-fx.js / app.fx.js 到 dist/（app.html / app.css 剥离注释）
+  3. 调用 terser 压缩全部 JS（只 compress、不 mangle，便于商店审核阅读）：
+     经典脚本 app.util.js / app.js / background.js 直接压缩；
+     ESM 的 ba-click-fx.js / app.fx.js 加 --module 压缩（terser 支持 ES module 解析）
+  4. 复制 app.css / app.html / icon128.png 到 dist/（app.html / app.css 剥离注释）
   5. 校验发布包文件齐全、manifest 合法、压缩 JS 非空
   6. 将 dist/ 打成可上传微软商店的 .zip
   7. 同步 site/index.html 与 site/privacy.html 中的版本号（不打进 zip）
@@ -29,13 +31,14 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC_MANIFEST = os.path.join(ROOT, "manifest.json")
 DIST_DIR = os.path.join(ROOT, "dist")
 # 需要原样复制的资源文件（JS 单独压缩，不在此列）
-# ba-click-fx.js / app.fx.js：第三方点击特效库与其 ESM 入口，均为模块脚本，
-# terser 无 module 解析模式且二者无需压缩，故按资源原样复制。
-ASSET_FILES = ["app.css", "app.html", "icon128.png", "ba-click-fx.js", "app.fx.js"]
+ASSET_FILES = ["app.css", "app.html", "icon128.png"]
 # 需要原样复制的目录（含子目录整体复制，如语言包）
 COPY_DIRS = ["_locales"]
-# 需要压缩的 JS 文件
+# 需要压缩的 JS 文件（经典脚本）
 JS_FILES = ["app.util.js", "app.js", "background.js"]
+# 需要压缩的 JS 文件（ESM，terser 加 --module 解析 import/export）。
+# ba-click-fx.js 为第三方点击特效库（633KB），压缩后发布包体积显著下降；源码不动。
+JS_MODULE_FILES = ["ba-click-fx.js", "app.fx.js"]
 
 # 发布包中需剥离注释的资源：正则按顺序应用，命中内容替换为空串
 HTML_COMMENT_RX = re.compile(r'<!--.*?-->', re.DOTALL)
@@ -114,8 +117,8 @@ def sync_site_version(new_version):
 TERSER_BIN = os.path.join(ROOT, "node_modules", "terser", "bin", "terser")
 
 
-def minify_js(src_path, dist_path):
-    """用 terser 压缩单个 JS 文件。返回压缩后字节数。"""
+def minify_js(src_path, dist_path, is_module=False):
+    """用 terser 压缩单个 JS 文件（ESM 传 is_module=True 加 --module）。返回压缩后字节数。"""
     if not os.path.isfile(src_path):
         fail(f"缺少源文件 {src_path}")
     if not os.path.isfile(TERSER_BIN):
@@ -124,8 +127,9 @@ def minify_js(src_path, dist_path):
         # 直接调用 node 运行 terser 入口（跨平台，避免 Windows 下 npx/.cmd 解析问题）
         result = subprocess.run(
             ["node", TERSER_BIN, src_path,
-             "--compress",
-             "--output", dist_path, "--comments", "false"],
+             "--compress"]
+            + (["--module"] if is_module else [])
+            + ["--output", dist_path, "--comments", "false"],
             cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
         )
     except FileNotFoundError:
@@ -170,13 +174,14 @@ def main():
 
     # 3. 压缩 JS 并复制资源
     js_orig = js_min = 0
-    for js in JS_FILES:
+    all_js = [(js, False) for js in JS_FILES] + [(js, True) for js in JS_MODULE_FILES]
+    for js, is_module in all_js:
         src = os.path.join(ROOT, js)
         dst = os.path.join(DIST_DIR, js)
         orig = os.path.getsize(src)
         if orig <= 0:
             fail(f"源 JS 为空: {js}")
-        min_size = minify_js(src, dst)
+        min_size = minify_js(src, dst, is_module)
         js_orig += orig
         js_min += min_size
         log(f"压缩 {js}: {orig} -> {min_size} 字节 ({100 * min_size / orig:.0f}%)")
@@ -215,7 +220,7 @@ def main():
 
     # 5. 校验发布包
     dist_manifest_data = load_manifest(dist_manifest)
-    expected = set(ASSET_FILES) | set(JS_FILES) | set(COPY_DIRS) | {"manifest.json"}
+    expected = set(ASSET_FILES) | set(JS_FILES) | set(JS_MODULE_FILES) | set(COPY_DIRS) | {"manifest.json"}
     actual = set(os.listdir(DIST_DIR))
     missing = expected - actual
     if missing:

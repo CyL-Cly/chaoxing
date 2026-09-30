@@ -291,6 +291,28 @@ aside nav ul li button.tab .tab-label {
     user-select: text;
 }
 
+/* ---------- 主题切换按钮 ---------- */
+.theme-toggle {
+    margin-top: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--btn-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
 /* ---------- Main area ---------- */
 .main-area {
     position: relative;
@@ -1283,11 +1305,73 @@ aside nav ul li button.tab .tab-label {
 }
 
 /* ============================================================
-   深色主题：随系统自动切换（仅覆盖变量，不改布局）
+   深色主题：支持手动切换 + 跟随系统（仅覆盖变量，不改布局）
    思路：深夜蓝底 + 半透明彩色底徽章 + 提亮文字与边框
    ============================================================ */
+
+/* 手动深色模式（优先级最高） */
+:root[data-theme="dark"] {
+    --bg-base: #0c141d;
+    --bg-panel: rgba(17, 28, 41, 0.86);
+    --bg-input: #0d1824;
+    --line: #223548;
+    --line-strong: #3a5570;
+    --text: #d9e6f2;
+    --text-secondary: #9fb5c9;
+    --text-muted: #6f879c;
+    --accent: #3aa4ff;
+    --accent-soft: rgba(58, 164, 255, 0.14);
+    --danger: #ff7076;
+    --danger-soft: rgba(255, 90, 95, 0.12);
+    --danger-border: rgba(255, 90, 95, 0.45);
+    --ok: #2fd39e;
+    --ok-soft: rgba(18, 184, 134, 0.13);
+    --warn: #ffb340;
+    --warn-soft: rgba(245, 159, 0, 0.13);
+    /* 遮罩纱色换深色，保留透出底层内容的磨砂感 */
+    --veil: rgba(9, 16, 25, 0.88);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.32);
+    --body-grad:
+        radial-gradient(900px 420px at 8% -10%, rgba(58, 164, 255, 0.09), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(18, 196, 176, 0.07), transparent 55%),
+        linear-gradient(180deg, #101b28 0%, var(--bg-base) 45%, #0a121b 100%);
+    --grid-line: rgba(58, 164, 255, 0.05);
+    --aside-bg: linear-gradient(180deg, rgba(16, 26, 40, 0.94), rgba(12, 20, 30, 0.92));
+    --brand-logo-bg: #10202e;
+    --nav-hover-border: rgba(58, 164, 255, 0.2);
+    --nav-active-text: #7fc3ff;
+    --nav-active-bg: linear-gradient(90deg, rgba(58, 164, 255, 0.16), rgba(18, 196, 176, 0.09));
+    --nav-active-border: rgba(58, 164, 255, 0.32);
+    --btn-bg: linear-gradient(180deg, #16283a, #101d2b);
+    --btn-hover-text: #7fc3ff;
+    --btn-disabled-bg: #1b2735;
+    --btn-disabled-color: #5b7085;
+    --card-grad: linear-gradient(180deg, #142433, #101c29);
+    --row-even: rgba(255, 255, 255, 0.03);
+    --row-hover: rgba(58, 164, 255, 0.08);
+    --tag-bg: rgba(58, 164, 255, 0.12);
+    --tag-border: rgba(58, 164, 255, 0.35);
+    --tag-color: #8cc8ff;
+    --badge-pending-color: #ff8589;
+    --badge-pending-bg: rgba(231, 76, 60, 0.15);
+    --badge-pending-border: rgba(231, 76, 60, 0.4);
+    --badge-review-color: #ffc35c;
+    --badge-review-bg: rgba(245, 159, 0, 0.15);
+    --badge-review-border: rgba(245, 159, 0, 0.4);
+    --badge-done-color: #3fd9ac;
+    --badge-done-bg: rgba(18, 184, 134, 0.15);
+    --badge-done-border: rgba(18, 184, 134, 0.4);
+    --link-type-pc: #2fb380;
+    --link-type-phone: #ff9d57;
+    --filterbar-grad: linear-gradient(180deg, #131f2d, #0f1a26);
+    --scroll-thumb: linear-gradient(180deg, #3a5570, #2e5d5f);
+    --scroll-thumb-hover: linear-gradient(180deg, #4a6a8a, #37736e);
+}
+
+/* 未手动指定主题时跟随系统 */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) {
         --bg-base: #0c141d;
         --bg-panel: rgba(17, 28, 41, 0.86);
         --bg-input: #0d1824;
@@ -1305,7 +1389,6 @@ aside nav ul li button.tab .tab-label {
         --ok-soft: rgba(18, 184, 134, 0.13);
         --warn: #ffb340;
         --warn-soft: rgba(245, 159, 0, 0.13);
-        /* 遮罩纱色换深色，保留透出底层内容的磨砂感 */
         --veil: rgba(9, 16, 25, 0.88);
         --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.32);

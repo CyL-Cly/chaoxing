@@ -87,17 +87,41 @@ function formatDeadline(ts) {
 
 // ============ 调试日志 ============
 
+// 双通道：console 始终输出；DOM 侧（高级页签 #logBody）仅在该页签可见时同步追加，
+// 其余时间写入内存缓冲（FIFO，上限 LOG_MAX_LINES），切入高级页签时一次性回放。
+// 高级页签不可见时每条日志都 append + scrollTop 是纯浪费，且 DOM 无上限增长。
+const LOG_MAX_LINES = 300;
+const logBuffer = [];
+let logToDom = false; // 由 render() 维护：高级页签可见时为 true
+
 function log(...args) {
-  const body = $("#logBody");
-  if (body) {
-    const line = document.createElement("div");
-    line.textContent = "[" + new Date().toLocaleTimeString() + "] " + args.map(a =>
-      typeof a === "string" ? a : JSON.stringify(a)
-    ).join(" ");
-    body.appendChild(line);
-    body.scrollTop = body.scrollHeight;
-  }
+  const text = "[" + new Date().toLocaleTimeString() + "] " + args.map(a =>
+    typeof a === "string" ? a : JSON.stringify(a)
+  ).join(" ");
   console.log(...args);
+  const body = logToDom ? $("#logBody") : null;
+  if (body) {
+    appendLogLine(body, text);
+  } else {
+    logBuffer.push(text);
+    if (logBuffer.length > LOG_MAX_LINES) logBuffer.shift();
+  }
+}
+
+function appendLogLine(body, text) {
+  const line = document.createElement("div");
+  line.textContent = text;
+  body.appendChild(line);
+  // 行数上限：长时间会话（如挂在高级页签观察日志）不再无限增长
+  while (body.childElementCount > LOG_MAX_LINES) body.removeChild(body.firstChild);
+  body.scrollTop = body.scrollHeight;
+}
+
+// 切入高级页签时回放缓冲日志
+function flushLogBuffer() {
+  const body = $("#logBody");
+  if (!body || !logBuffer.length) return;
+  for (const text of logBuffer.splice(0)) appendLogLine(body, text);
 }
 
 // 匿名遥测：只发 event / feature / version，不含账号、课程、作业内容。
@@ -584,86 +608,84 @@ async function fetchStuWork() {
   return text;
 }
 
-function parseWorks(html) {
+// 通用列表解析骨架：作业 / 考试除选择器、字段名外完全同构，收归此处消除重复。
+function parseListItems(html, config) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const items = [];
   for (const li of $$("li", doc)) {
     const dataUrl = li.getAttribute("data");
-    if (!dataUrl || !/taskrefId|workRelationId/.test(dataUrl)) continue;
+    if (!dataUrl || !config.dataRe.test(dataUrl)) continue;
     const q = parseQuery(dataUrl.split("?")[1] || "");
-    const titleP = $('p[aria-hidden="true"]', li);
-    const courseSpan = [...$$("span", li)].find(s => /《.+》/.test(s.textContent));
-    const workId = q.taskrefId || q.workRelationId || "";
-    if (!workId) continue;
-    // 过期作业图片为 task-work-gray.png，未过期为 task-work.png（可提交）
-    const imgSrc = $("img", li) && $("img", li).getAttribute("src") || "";
-    const expired = /task-work-gray/.test(imgSrc);
-    // 剩余时间形如 <span class="fr" aria-hidden="true">剩余218小时9分钟</span>
-    // 页面无绝对截止时间，用「解析时刻 + 剩余时长」推算
-    const remainSpan = $(".fr", li);
-    const remainText = remainSpan ? remainSpan.textContent.trim() : "";
+    const id = q[config.idField];
+    if (!id) continue;
+    const title = config.getTitle(li, q) || "（未命名" + config.label + "）";
+    const status = config.getStatus(li) || "";
+    const course = config.getCourse ? (config.getCourse(li) || "") : "";
+    const imgSrc = (li.querySelector("img")?.getAttribute("src")) || "";
+    const expired = config.expiredRe.test(imgSrc);
+    const remainText = config.getRemainText(li);
     const remainMs = parseRemainMs(remainText);
-    items.push({
-      title: (titleP && titleP.textContent.trim()) || "（未命名作业）",
-      status: ($(".status", li) && $(".status", li).textContent.trim()) || "",
-      course: courseSpan ? courseSpan.textContent.trim() : "",
+    const item = {
+      title, status,
       courseId: q.courseId || "",
-      clazzId: q.clazzId || "",
-      workId,
-      expired,
-      remainText,
-      remainMs,
+      clazzId: q.clazzId || q.classId || "",
+      [config.idKey]: id,
+      expired, remainText, remainMs,
       deadline: remainMs == null ? null : Date.now() + remainMs,
-      rawUrl: dataUrl
-    });
+      rawUrl: config.resolveUrl ? config.resolveUrl(dataUrl) : dataUrl
+    };
+    if (course) item.course = course;
+    items.push(item);
   }
   return items;
+}
+
+function parseWorks(html) {
+  return parseListItems(html, {
+    label: "作业",
+    dataRe: /taskrefId|workRelationId/,
+    idField: "taskrefId", idKey: "workId",
+    getTitle: li => {
+      const p = $('p[aria-hidden="true"]', li);
+      return p && p.textContent.trim();
+    },
+    getStatus: li => { const el = $(".status", li); return el && el.textContent.trim(); },
+    getCourse: li => {
+      const span = [...$$("span", li)].find(s => /《.+》/.test(s.textContent));
+      return span && span.textContent.trim();
+    },
+    expiredRe: /task-work-gray/,
+    getRemainText: li => { const s = $(".fr", li); return s ? s.textContent.trim() : ""; }
+  });
 }
 
 // ============ 考试数据 ============
 
 // 解析手机版考试聚合页，返回考试列表
 function parseExams(html) {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const items = [];
-  for (const li of $$("li", doc)) {
-    const dataUrl = li.getAttribute("data");
-    if (!dataUrl || !/task-exam/.test(dataUrl)) continue;
-    const q = parseQuery(dataUrl.split("?")[1] || "");
-    const dt = $("dt", li);
-    const state = $(".ks_state", li);
-    if (!q.taskrefId) continue;
-    // 过期考试图片为 ks_02.png（学习通页上不可点），未过期为 ks_01 等
-    const imgSrc = $("img", li) && $("img", li).getAttribute("src") || "";
-    const expired = /ks_02/.test(imgSrc);
-    // 剩余时间在 <dl class="ks_text"><dd>剩余4290小时58分钟</dd>，
-    // dd 缺失时回退解析 aria-label 中的「剩余时间：…」
-    const dd = $("dd", li);
-    let remainText = dd ? dd.textContent.trim() : "";
-    if (!remainText) {
-      const dl = $(".ks_text", li);
-      const aria = (dl && dl.getAttribute("aria-label")) || "";
-      const mt = /剩余时间[:：]\s*([^;；]*)/.exec(aria);
-      if (mt) remainText = mt[1].trim();
-    }
-    const remainMs = parseRemainMs(remainText);
-    items.push({
-      title: (dt && dt.textContent.trim()) || li.getAttribute("title") || "（未命名考试）",
-      status: (state && state.textContent.trim()) || "",
-      courseId: q.courseId || "",
-      clazzId: q.classId || q.clazzId || "",
-      examId: q.taskrefId,
-      expired,
-      remainText,
-      remainMs,
-      deadline: remainMs == null ? null : Date.now() + remainMs,
-      // 手机版考试链接（回退用，能考）。data 实测为相对路径
-      // （/exam-ans/exam/phone/task-exam?taskrefId=..&courseId=..&classId=..&from=examlist），
-      // 若将来页面改成绝对地址则直接用，避免拼出 https://hosthttps://...
-      rawUrl: /^https?:\/\//i.test(dataUrl) ? dataUrl : "https://mooc1-api.chaoxing.com" + dataUrl
-    });
-  }
-  return items;
+  return parseListItems(html, {
+    label: "考试",
+    dataRe: /task-exam/,
+    idField: "taskrefId", idKey: "examId",
+    getTitle: (li, q) => {
+      const dt = $("dt", li);
+      return (dt && dt.textContent.trim()) || li.getAttribute("title");
+    },
+    getStatus: li => { const el = $(".ks_state", li); return el && el.textContent.trim(); },
+    expiredRe: /ks_02/,
+    getRemainText: li => {
+      const dd = $("dd", li);
+      let text = dd ? dd.textContent.trim() : "";
+      if (!text) {
+        const dl = $(".ks_text", li);
+        const aria = (dl && dl.getAttribute("aria-label")) || "";
+        const mt = /剩余时间[:：]\s*([^;；]*)/.exec(aria);
+        if (mt) text = mt[1].trim();
+      }
+      return text;
+    },
+    resolveUrl: dataUrl => /^https?:\/\//i.test(dataUrl) ? dataUrl : "https://mooc1-api.chaoxing.com" + dataUrl
+  });
 }
 
 // 拉手机版考试聚合页。
@@ -887,9 +909,12 @@ async function fetchCourseNames() {
     const doc = new DOMParser().parseFromString(html, "text/html");
     const map = {};
     for (const card of $$(".course", doc)) {
-      const courseId = $(".courseId", card) && $(".courseId", card).value;
-      const clazzId = $(".clazzId", card) && $(".clazzId", card).value;
-      const name = $(".course-name", card) && $(".course-name", card).textContent.trim();
+      const idEl = $(".courseId", card);
+      const clazzEl = $(".clazzId", card);
+      const nameEl = $(".course-name", card);
+      const courseId = idEl && idEl.value;
+      const clazzId = clazzEl && clazzEl.value;
+      const name = nameEl && nameEl.textContent.trim();
       if (courseId && clazzId && name) map[`${courseId}_${clazzId}`] = name;
     }
     return map;
@@ -1194,11 +1219,20 @@ function uniqueCourses(items, courseNameMap) {
   return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], "zh"));
 }
 
+let courseSelectSig = null; // 上次构建的课程下拉签名，未变化时跳过全量重建（render 高频路径）
+
 function syncCourseSelect(items, courseNameMap) {
   const sel = $("#courseSelect");
   if (!sel) return;
   const prev = preferredCourseKey || sel.value;
   const courses = uniqueCourses(items, courseNameMap);
+  // 签名 = 当前选择 + 课程 key/名序列；一致说明选项集与选中值都未变，无需 replaceChildren
+  const sig = prev + "\n" + courses.map(([k, name]) => k + "\t" + name).join("\n");
+  if (sig === courseSelectSig) {
+    sel.value = prev;
+    return;
+  }
+  courseSelectSig = sig;
   // 当前页签没有这门课也保留选择（切作业/考试时不冲掉；列表会显示为空）
   sel.replaceChildren(el("option", { value: "", text: "全部课程" }));
   for (const [k, name] of courses) sel.appendChild(el("option", { value: k, text: name }));
@@ -1230,24 +1264,15 @@ function isActionableItem(it) {
   return isPendingItem(it) && isSubmittableItem(it);
 }
 
-function summarizeWorks(list) {
+// 作业 / 考试条目的统计完全同构，共用一份实现
+function summarizeItems(list) {
   let pending = 0, submittable = 0, expired = 0;
-  for (const w of list) {
-    if (isPendingItem(w)) pending++;
-    if (w.expired) expired++;
-    if (isSubmittableItem(w)) submittable++;
+  for (const it of list) {
+    if (isPendingItem(it)) pending++;
+    if (it.expired) expired++;
+    if (isSubmittableItem(it)) submittable++;
   }
-  return { total: list.length, pending, submittable, expired, done: list.length - pending };
-}
-
-function summarizeExams(list) {
-  let pending = 0, submittable = 0, expired = 0;
-  for (const e of list) {
-    if (isPendingItem(e)) pending++;
-    if (e.expired) expired++;
-    if (isSubmittableItem(e)) submittable++;
-  }
-  return { total: list.length, pending, submittable, expired, done: list.length - pending };
+  return { pending, submittable, expired };
 }
 
 function setNavBadge(id, count, muted, title) {
@@ -1310,27 +1335,41 @@ function addHiddenControls(item, kind, { children, isHiddenView, idKey }) {
   return li;
 }
 
+// 构建条目公共 children：课程名、标题、截止时间、链接类型标签、状态徽章。
+// linkMeta 由调用方提供 { text, style?, title? }，抹平作业/考试差异。
+function buildItemChildren(item, courseNameMap, showCourse, linkMeta) {
+  const children = [];
+  if (showCourse) {
+    children.push(el("span", {
+      class: "work-course",
+      text: courseLabel(item.courseId, item.clazzId, item.course, courseNameMap)
+    }));
+  }
+  children.push(el("span", { class: "work-title", text: item.title }));
+  const dl = deadlineEl(item.remainMs, statusClass(item.status) === "done");
+  if (dl) children.push(dl);
+  children.push(el("span", {
+    class: "work-link-type",
+    text: linkMeta.text,
+    style: linkMeta.style || "",
+    title: linkMeta.title || ""
+  }));
+  children.push(el("span", { class: `badge ${statusClass(item.status)}`, text: statusText(item.status) }));
+  return children;
+}
+
 // 构建作业列表 DOM；showCourse 为 true 时在条目内显示课程名（扁平排序模式）。
 // opts.context === "hidden" 时为「已隐藏」视图：条目附加「恢复」按钮，右键菜单为「取消隐藏」。
 function buildWorkList(items, courseNameMap, showCourse, opts = {}) {
   const isHiddenView = opts.context === "hidden";
   const ul = el("ul", { class: "work-list" });
   for (const w of items) {
-    const children = [];
-    // 扁平排序模式：课程名置于最左侧，便于按课程快速辨认
-    if (showCourse) {
-      children.push(el("span", {
-        class: "work-course",
-        text: courseLabel(w.courseId, w.clazzId, w.course, courseNameMap)
-      }));
-    }
-    children.push(el("span", { class: "work-title", text: w.title }));
-    const dl = deadlineEl(w.remainMs, statusClass(w.status) === "done");
-    if (dl) children.push(dl);
-    children.push(el("span", { class: "work-link-type", text: w.expired ? "已过期" : "待打开" }));
-    children.push(el("span", { class: `badge ${statusClass(w.status)}`, text: statusText(w.status) }));
-
+    const labelText = w.expired ? "已过期" : "待打开";
+    const children = buildItemChildren(w, courseNameMap, showCourse, { text: labelText });
     const li = addHiddenControls(w, "work", { children, isHiddenView, idKey: "workId" });
+    // 把初始文案写进 dataset，供 openWork 恢复时读取，避免跨函数硬编码
+    const linkTypeEl = li.querySelector(".work-link-type");
+    if (linkTypeEl) linkTypeEl.dataset.orig = labelText;
     li.addEventListener("click", () => openWork(w, li));
     ul.appendChild(li);
   }
@@ -1476,30 +1515,22 @@ function buildExamList(items, courseNameMap, examDesktopMaps, showCourse, opts =
     const courseMap = examDesktopMaps[courseKey] || {};
     const desktopUrl = courseMap[e.examId] || "";
     const hasDesktop = !!desktopUrl;
-    // 未交卷考试的电脑版入口是"本课考试集合页"，鼠标悬停时说明清楚，避免点开以为是单场考试
     const isExamListLink = /exam-list/.test(desktopUrl);
 
-    const children = [];
-    // 扁平排序模式：课程名置于最左侧
-    if (showCourse) {
-      children.push(el("span", { class: "work-course", text: courseLabel(e.courseId, e.clazzId, e.course, courseNameMap) }));
-    }
-    children.push(el("span", { class: "work-title", text: e.title }));
-    const dl = deadlineEl(e.remainMs, statusClass(e.status) === "done");
-    if (dl) children.push(dl);
-    children.push(el("span", {
-      class: "work-link-type",
-      text: e.expired ? "已过期" : (hasDesktop ? "电脑版" : "手机版"),
+    const labelText = e.expired ? "已过期" : (hasDesktop ? "电脑版" : "手机版");
+    const children = buildItemChildren(e, courseNameMap, showCourse, {
+      text: labelText,
       style: e.expired ? "" : `color:${hasDesktop ? "#27ae60" : "#e67e22"}`,
       title: e.expired
         ? "已过期，无法进入"
         : hasDesktop
           ? (isExamListLink ? "未交卷：打开本课电脑版考试集合页，在页内点击「进入考试」" : "打开电脑版查看试卷")
           : "打开手机版页面"
-    }));
-    children.push(el("span", { class: `badge ${statusClass(e.status)}`, text: statusText(e.status) }));
+    });
 
     const li = addHiddenControls(e, "exam", { children, isHiddenView, idKey: "examId" });
+    const linkTypeEl = li.querySelector(".work-link-type");
+    if (linkTypeEl) linkTypeEl.dataset.orig = labelText;
     li.addEventListener("click", () => {
       if (e.expired) return;
       openExam(e, courseMap[e.examId]);
@@ -1586,9 +1617,8 @@ function renderHidden(courseNameMap, examDesktopMaps, mode) {
   return { workCount: hiddenWorks.length, examCount: hiddenExams.length };
 }
 
-// 打开单个考试：优先电脑版，回退手机版
+// 打开单个考试：优先电脑版，回退手机版（过期条目在 buildExamList 的点击处已拦截）
 function openExam(exam, desktopUrl) {
-  if (exam.expired) return;
   openTab(desktopUrl || exam.rawUrl);
   track("feature_used", { feature: "open_exam" });
 }
@@ -1610,12 +1640,8 @@ async function openExamCourseList(courseId, clazzId) {
 // 打开单个作业：优先电脑版链接，失败回退手机版
 async function openWork(w, li) {
   const typeLabel = $(".work-link-type", li);
-  // 上一轮已成功时标签停在「电脑版」，此时 orig 不能捕获「电脑版」——否则本轮失败（走手机版
-  // 路径）后 1.5s 恢复会把失败结果改回「电脑版」，与失败矛盾。改取条目初始文案，
-  // 与 buildWorkList 渲染一致：过期「已过期」/未过期「待打开」。
-  const orig = typeLabel.textContent === "电脑版"
-    ? (w.expired ? "已过期" : "待打开")
-    : typeLabel.textContent;
+  // 从 dataset 读取 buildWorkList 渲染时写入的初始文案，避免跨函数硬编码
+  const orig = typeLabel.dataset.orig || (w.expired ? "已过期" : "待打开");
   // 1.5s 内重复点击同一条目：先清掉上一轮遗留的恢复定时器，避免它覆盖本轮「获取中…」
   if (typeLabel._restoreTimer) clearTimeout(typeLabel._restoreTimer);
   typeLabel.textContent = "获取中…";
@@ -1742,12 +1768,16 @@ function setupAdvancedUnlock() {
 //   flags        在途请求的语义：silent 失败默认只写日志；若期间点了「刷新」则记 force，失败时仍弹错误
 //   ts / source  数据获取时间戳与来源（"cache"=读缓存 / "net"=本次请求所得），
 //                用于工具栏右侧「数据/缓存 · Ns 前」提示
+//   cacheField   缓存条目中链路专属附加数据的字段名（作业=courseNameMap / 考试=desktopMaps）
+//   setExtra     附加数据的落态赋值（写入对应全局状态，applyCache 两链路共用）
 const PIPELINES = {
   work: {
     label: "作业",
     cacheKey: "chaoxing.cache.works.v1",
     loadingText: "正在逐科目检查作业…",
     trackFeature: "fetch_works",
+    cacheField: "courseNameMap",
+    setExtra: v => { courseNameMap = v; },
     items: [],
     loaded: false,
     inflight: null,
@@ -1760,6 +1790,8 @@ const PIPELINES = {
     cacheKey: "chaoxing.cache.exams.v1",
     loadingText: "正在逐科目检查考试…",
     trackFeature: "fetch_exams",
+    cacheField: "desktopMaps",
+    setExtra: v => { examDesktopMaps = v; },
     items: [],
     loaded: false,
     inflight: null,
@@ -1772,19 +1804,18 @@ const PIPELINES = {
 let courseNameMap = {};
 let examDesktopMaps = {};
 
-function fingerprintWorks(items, names) {
-  const namePart = names && typeof names === "object" ? JSON.stringify(names) : "";
-  return items.map(w =>
-    [w.courseId, w.clazzId, w.workId, w.status, w.expired ? 1 : 0, w.title].join("\t")
-  ).join("\n") + "\n#" + namePart;
+// 数据指纹：静默刷新前后逐字段比较（相同则跳过重绘、保留滚动位置）。
+// idField 为 workId / examId；extraOf 为条目级附加字段（考试附电脑版链接），
+// extraHash 为全局附加串（作业附课程名映射的 JSON）。
+function fingerprintItems(items, idField, { extraOf = null, extraHash = "" } = {}) {
+  const body = items.map(it =>
+    [it.courseId, it.clazzId, it[idField], it.status, it.expired ? 1 : 0, it.title, extraOf ? extraOf(it) : ""].join("\t")
+  ).join("\n");
+  return extraHash ? body + "\n#" + extraHash : body;
 }
 
-function fingerprintExams(items, maps) {
-  return items.map(e => {
-    const url = ((maps || {})[`${e.courseId}_${e.clazzId}`] || {})[e.examId] || "";
-    return [e.courseId, e.clazzId, e.examId, e.status, e.expired ? 1 : 0, e.title, url].join("\t");
-  }).join("\n");
-}
+// 考试条目的电脑版链接提取（指纹比较共用）：无映射时为空串
+const examDesktopOf = maps => e => ((maps || {})[itemCourseKey(e)] || {})[e.examId] || "";
 
 // 正在阻塞加载的链路集合：两条链路并存时，全部结束才撤掉遮罩
 const activeLoads = new Set();
@@ -1821,31 +1852,28 @@ function readUiPrefs() {
 }
 
 function writeUiPrefs() {
-  try {
-    const sortEl = $("#sortSelect");
-    const pendingEl = $("#onlyPending");
-    const subEl = $("#onlySubmittable");
-    const courseEl = $("#courseSelect");
-    const searchEl = $("#searchInput");
-    const payload = {
-      onlyPending: !!(pendingEl && pendingEl.checked),
-      onlySubmittable: !!(subEl && subEl.checked),
-      sortMode: (sortEl && VALID_SORT.has(sortEl.value)) ? sortEl.value : "deadline-asc",
-      activeTab: VALID_TAB.has(activeTab) ? activeTab : "work",
-      courseKey: preferredCourseKey || ((courseEl && courseEl.value) || ""),
-      searchQuery: searchEl ? searchEl.value : ""
-    };
-    // 停留在「高级」时不改写页签，避免刷新后落到作业页
-    const prev = readUiPrefs();
-    if (!VALID_TAB.has(activeTab)) {
-      if (prev && VALID_TAB.has(prev.activeTab)) payload.activeTab = prev.activeTab;
-    }
-    // fxOff 由 app.fx.js（点击特效开关）读写同一键，这里原样保留，避免覆盖
-    if (prev && prev.fxOff === true) payload.fxOff = true;
-    writeJsonStorage(UI_PREFS_KEY, payload, { label: "界面偏好写入失败（本次会话仍生效）" });
-  } catch (e) {
-    log("✗ 界面偏好写入失败（本次会话仍生效）:", e.message);
+  // 无需外层 try/catch：readUiPrefs/writeJsonStorage 内部自带降级，DOM 读取均为空值安全访问
+  const sortEl = $("#sortSelect");
+  const pendingEl = $("#onlyPending");
+  const subEl = $("#onlySubmittable");
+  const courseEl = $("#courseSelect");
+  const searchEl = $("#searchInput");
+  const payload = {
+    onlyPending: !!(pendingEl && pendingEl.checked),
+    onlySubmittable: !!(subEl && subEl.checked),
+    sortMode: (sortEl && VALID_SORT.has(sortEl.value)) ? sortEl.value : "deadline-asc",
+    activeTab: VALID_TAB.has(activeTab) ? activeTab : "work",
+    courseKey: preferredCourseKey || ((courseEl && courseEl.value) || ""),
+    searchQuery: searchEl ? searchEl.value : ""
+  };
+  // 停留在「高级」时不改写页签，避免刷新后落到作业页
+  const prev = readUiPrefs();
+  if (!VALID_TAB.has(activeTab)) {
+    if (prev && VALID_TAB.has(prev.activeTab)) payload.activeTab = prev.activeTab;
   }
+  // fxOff 由 app.fx.js（点击特效开关）读写同一键，这里原样保留，避免覆盖
+  if (prev && prev.fxOff === true) payload.fxOff = true;
+  writeJsonStorage(UI_PREFS_KEY, payload, { label: "界面偏好写入失败（本次会话仍生效）" });
 }
 
 function applyUiPrefs() {
@@ -1947,23 +1975,17 @@ function rehydrateItems(items) {
   return items;
 }
 
-// 把缓存装载为当前状态（同时把该链路标记为已加载）
-function applyWorkCache(entry) {
-  PIPELINES.work.items = rehydrateItems(entry.items);
-  if (entry.courseNameMap && typeof entry.courseNameMap === "object") courseNameMap = entry.courseNameMap;
-  PIPELINES.work.loaded = true;
-  PIPELINES.work.ts = entry.ts;
-  PIPELINES.work.source = "cache";
-  hiddenStore.migrateBareIds("work", PIPELINES.work.items);
-}
-
-function applyExamCache(entry) {
-  PIPELINES.exam.items = rehydrateItems(entry.items);
-  if (entry.desktopMaps && typeof entry.desktopMaps === "object") examDesktopMaps = entry.desktopMaps;
-  PIPELINES.exam.loaded = true;
-  PIPELINES.exam.ts = entry.ts;
-  PIPELINES.exam.source = "cache";
-  hiddenStore.migrateBareIds("exam", PIPELINES.exam.items);
+// 把缓存装载为当前状态（同时把该链路标记为已加载）。
+// 附加数据（作业=课程名映射 / 考试=电脑版链接映射）的字段名与落态由 PIPELINES[kind] 配置。
+function applyCache(kind, entry) {
+  const P = PIPELINES[kind];
+  P.items = rehydrateItems(entry.items);
+  const extra = entry[P.cacheField];
+  if (extra && typeof extra === "object") P.setExtra(extra);
+  P.loaded = true;
+  P.ts = entry.ts;
+  P.source = "cache";
+  hiddenStore.migrateBareIds(kind, P.items);
 }
 
 // ---------- 工具栏右侧的数据时间提示 ----------
@@ -1997,30 +2019,46 @@ function updateDataHint() {
     (fresh ? "（90 秒内再次打开不会重复请求）" : "，点「刷新」可立即更新");
 }
 
+let hintTimerWanted = false; // 提示需要秒级刷新（切到「高级」页签即置 false）
+
 // 秒数实时递增；只在提示可见时运行，切到「高级」页签即停
 function startHintTimer() {
-  if (hintTimer) return;
+  hintTimerWanted = true;
+  // 页面隐藏时暂不启动，由 visibilitychange 恢复可见后按需重启
+  if (hintTimer || document.hidden) return;
   hintTimer = setInterval(updateDataHint, 1000);
 }
 
 function stopHintTimer() {
+  hintTimerWanted = false;
   if (hintTimer) {
     clearInterval(hintTimer);
     hintTimer = null;
   }
 }
 
+// 页面不可见（切走标签页/最小化）时挂起秒级定时器，恢复可见且需要时重启，避免后台空转
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (hintTimer) {
+      clearInterval(hintTimer);
+      hintTimer = null;
+    }
+  } else if (hintTimerWanted && !hintTimer) {
+    hintTimer = setInterval(updateDataHint, 1000);
+  }
+});
+
 // ---------- 数据链路：作业 / 考试（按需加载 + 并发去重 + 缓存） ----------
 
 // ensureWorks / ensureExams 的公共骨架（两链路除参数化差异外逐行同构）：
 //   force（手动刷新）→ 绕过缓存；缓存新鲜 → 直接用缓存、0 请求；
 //   缓存过期 → 先渲染旧数据（页面秒开）再后台静默刷新；无缓存 → 弹遮罩加载。
-// hooks 覆盖两条链路的全部非对称点：
-//   applyCache     缓存装载（courseNameMap / examDesktopMaps 的归属与落态赋值各自不同）
-//   fetchAndApply  发请求 + 落态 + writeCache + 成功日志，返回 same（去重比较键与成对
-//                  apply 逻辑各自不同）。work 侧含电脑版链接缓存清理与 autoLoginTried
-//                  补拉，exam 侧含 buildAllExamDesktopMaps，差异都收在各自闭包内。
-function createEnsure(kind, { applyCache, fetchAndApply }) {
+// 缓存装载已由 PIPELINES[kind].cacheField/setExtra 配置化（applyCache 两链路共用）；
+// hooks 仅剩 fetchAndApply：发请求 + 落态 + writeCache + 成功日志，返回 same（去重比较键与成对
+// apply 逻辑各自不同）。work 侧含电脑版链接缓存清理与 autoLoginTried 补拉，
+// exam 侧含 buildAllExamDesktopMaps，差异都收在各自闭包内。
+function createEnsure(kind, { fetchAndApply }) {
   const P = PIPELINES[kind];
   return async function ensure({ force = false, silent = false } = {}) {
     if (P.inflight) {
@@ -2037,14 +2075,14 @@ function createEnsure(kind, { applyCache, fetchAndApply }) {
     } else {
       const entry = readCache(kind);
       if (isCacheFresh(entry)) {
-        applyCache(entry);
+        applyCache(kind, entry);
         log("✓ " + P.label + "命中新鲜缓存（" + formatAgo(cacheAgeMs(entry)) + "），本次不请求");
         render();
         track("feature_used", { feature: P.trackFeature });
         return;
       }
       if (entry) {
-        applyCache(entry);
+        applyCache(kind, entry);
         log("↻ " + P.label + "缓存已过期（" + formatAgo(cacheAgeMs(entry)) + "），先渲染旧数据并后台静默刷新");
         render();
         silent = true;
@@ -2097,7 +2135,6 @@ function createEnsure(kind, { applyCache, fetchAndApply }) {
 
 // 确保作业数据就绪
 const ensureWorks = createEnsure("work", {
-  applyCache: applyWorkCache,
   async fetchAndApply({ silent }) {
     // 真正发请求前才清电脑版链接缓存，避免沿用过期 enc/会话（读缓存时不清）
     for (const k of Object.keys(desktopCache)) delete desktopCache[k];
@@ -2111,7 +2148,9 @@ const ensureWorks = createEnsure("work", {
     hiddenStore.migrateBareIds("work", items);
 
     const P = PIPELINES.work;
-    const same = silent && P.loaded && fingerprintWorks(P.items, courseNameMap) === fingerprintWorks(items, names);
+    const same = silent && P.loaded &&
+      fingerprintItems(P.items, "workId", { extraHash: JSON.stringify(courseNameMap) }) ===
+      fingerprintItems(items, "workId", { extraHash: JSON.stringify(names) });
     courseNameMap = names;
     P.items = items;
     P.loaded = true;
@@ -2125,7 +2164,6 @@ const ensureWorks = createEnsure("work", {
 
 // 确保考试数据就绪（含电脑版链接映射）。语义与 ensureWorks 完全一致。
 const ensureExams = createEnsure("exam", {
-  applyCache: applyExamCache,
   async fetchAndApply({ silent }) {
     const exams = await fetchExams();
     // 失败时 fetchExams 抛 NeedLoginError，由 handleLoginFailure 统一处理，不会走到下面
@@ -2134,7 +2172,9 @@ const ensureExams = createEnsure("exam", {
     // 静默刷新且某课考试集合没变时复用已有电脑版链接，跳过逐场 302 探测
     const maps = await buildAllExamDesktopMaps(exams, examDesktopMaps, { reuse: silent });
     const P = PIPELINES.exam;
-    const same = silent && P.loaded && fingerprintExams(P.items, examDesktopMaps) === fingerprintExams(exams, maps);
+    const same = silent && P.loaded &&
+      fingerprintItems(P.items, "examId", { extraOf: examDesktopOf(examDesktopMaps) }) ===
+      fingerprintItems(exams, "examId", { extraOf: examDesktopOf(maps) });
     P.items = exams;
     P.loaded = true;
     P.ts = Date.now();
@@ -2153,39 +2193,41 @@ async function bootstrap() {
   continueBootstrap();
 }
 
+// 按页签补齐数据（bootstrap / 切页签 / 手动刷新三处共用，消除三份易漂移的重复分支）：
+// exam 只补考试；hidden 需要作业与考试（顺序请求，避免并发打同一批接口）；
+// work（默认）只补作业；advanced 是纯日志页不拉数据。已加载的链路跳过（force 时强制）。
+async function ensureForTab(tab, { force = false } = {}) {
+  const opts = { force };
+  if (tab === "exam") {
+    if (force || !PIPELINES.exam.loaded) await ensureExams(opts);
+  } else if (tab === "hidden") {
+    if (force || !PIPELINES.work.loaded) await ensureWorks(opts);
+    if (force || !PIPELINES.exam.loaded) await ensureExams(opts);
+  } else if (tab !== "advanced") {
+    if (force || !PIPELINES.work.loaded) await ensureWorks(opts);
+  }
+}
+
 // 同意协议后（或已 allow）才执行的启动逻辑；由同意回调与 bootstrap 调用。
-// 各分支内部都会自行 render，这里先按已恢复的筛选/排序画一帧空态。
+// ensureForTab 内部各链路完成时会自行 render，这里先按已恢复的筛选/排序画一帧空态。
 async function continueBootstrap() {
   if (agreedStarted) return;
   agreedStarted = true;
   log("======== 打开页面 ========");
   track("feature_used", { feature: "app_open" });
   render();
-  if (activeTab === "exam") {
-    if (!PIPELINES.exam.loaded) await ensureExams();
-  } else if (activeTab === "hidden") {
-    if (!PIPELINES.work.loaded) await ensureWorks();
-    if (!PIPELINES.exam.loaded) await ensureExams();
-  } else if (!PIPELINES.work.loaded) {
-    await ensureWorks();
-  }
+  await ensureForTab(activeTab);
 }
 
 // 手动刷新：只刷当前页签需要的数据，并绕过缓存强制取新
 async function refreshCurrentTab() {
   log("手动刷新 · 页签:", activeTab);
   track("feature_used", { feature: "refresh" });
-  if (activeTab === "exam") return ensureExams({ force: true });
-  if (activeTab === "hidden") {
-    await ensureWorks({ force: true });
-    await ensureExams({ force: true });
-    return;
-  }
   if (activeTab === "advanced") {
     setStatus("高级 · 调试日志");
     return;
   }
-  return ensureWorks({ force: true });
+  await ensureForTab(activeTab, { force: true });
 }
 
 // 按当前 tab 渲染。opts.preserveScroll：静默刷新时尽量保住滚动位置，并关掉已失效的右键菜单
@@ -2199,6 +2241,8 @@ function render(opts = {}) {
     listView.style.display = "none";
     advancedView.style.display = "block";
     setStatus("高级 · 调试日志");
+    logToDom = true;
+    flushLogBuffer();
     stopHintTimer();
     updateDataHint();
     updateNavBadges();
@@ -2207,6 +2251,7 @@ function render(opts = {}) {
   }
   listView.style.display = "block";
   advancedView.style.display = "none";
+  logToDom = false;
   const onlyPending = $("#onlyPending").checked;
   const onlySubmittable = $("#onlySubmittable").checked;
   const sortSel = $("#sortSelect");
@@ -2216,6 +2261,12 @@ function render(opts = {}) {
   const hideFilters = activeTab === "hidden";
   $$(".toolbar .filter").forEach(lbl => { lbl.style.display = hideFilters ? "none" : "flex"; });
 
+  const restoreAllBtn = $("#restoreAllBtn");
+  if (restoreAllBtn) {
+    const hasHidden = hiddenStore.size() > 0;
+    restoreAllBtn.style.display = (activeTab === "hidden" && hasHidden) ? "inline-flex" : "none";
+  }
+
   const hiddenWorkCount = hiddenStore.size("work");
   const hiddenExamCount = hiddenStore.size("exam");
   syncCourseSelect(PIPELINES.work.items.concat(PIPELINES.exam.items), courseNameMap);
@@ -2223,7 +2274,7 @@ function render(opts = {}) {
     if (PIPELINES.exam.loaded) rehydrateItems(PIPELINES.exam.items);
     const visible = PIPELINES.exam.items.filter(e => !hiddenStore.has("exam", e));
     const shown = renderExams(PIPELINES.exam.items, onlyPending, onlySubmittable, courseNameMap, examDesktopMaps, sortMode, { context: "exam" });
-    const s = summarizeExams(visible);
+    const s = summarizeItems(visible);
     const parts = [`未完成 ${s.pending}`, `可提交 ${s.submittable}`, `已过期 ${s.expired}`];
     if (hiddenExamCount) parts.push(`已隐藏 ${hiddenExamCount}`);
     if (shown.length !== visible.length) parts.push(`显示 ${shown.length}`);
@@ -2240,7 +2291,7 @@ function render(opts = {}) {
     if (PIPELINES.work.loaded) rehydrateItems(PIPELINES.work.items);
     const visible = PIPELINES.work.items.filter(w => !hiddenStore.has("work", w));
     const shown = renderWorks(PIPELINES.work.items, onlyPending, onlySubmittable, courseNameMap, sortMode, { context: "work" });
-    const s = summarizeWorks(visible);
+    const s = summarizeItems(visible);
     const parts = [`未完成 ${s.pending}`, `可提交 ${s.submittable}`, `已过期 ${s.expired}`];
     if (hiddenWorkCount) parts.push(`已隐藏 ${hiddenWorkCount}`);
     if (shown.length !== visible.length) parts.push(`显示 ${shown.length}`);
@@ -2274,18 +2325,7 @@ function setTab(type) {
   writeUiPrefs();
   // 先把已有数据渲染出来（无数据时是空态，遮罩会盖住），再按需补数据
   render();
-
-  if (type === "exam") {
-    if (!PIPELINES.exam.loaded) ensureExams();
-  } else if (type === "hidden") {
-    // 「已隐藏」同时展示作业与考试，缺哪份补哪份（顺序执行，避免并发请求同一批接口）
-    (async () => {
-      if (!PIPELINES.work.loaded) await ensureWorks();
-      if (!PIPELINES.exam.loaded) await ensureExams();
-    })();
-  } else if (type === "work") {
-    if (!PIPELINES.work.loaded) ensureWorks();
-  }
+  ensureForTab(type);
 }
 
 function setStatus(text) { $("#status").textContent = text; }
@@ -2296,6 +2336,21 @@ function showError(msg) {
 }
 function hideError() { $("#error").style.display = "none"; }
 
+function restoreAllHidden() {
+  let changed = false;
+  for (const w of PIPELINES.work.items) {
+    if (hiddenStore.has("work", w) && hiddenStore.restore("work", w)) changed = true;
+  }
+  for (const e of PIPELINES.exam.items) {
+    if (hiddenStore.has("exam", e) && hiddenStore.restore("exam", e)) changed = true;
+  }
+  if (changed) {
+    log("全部恢复已隐藏条目");
+    track("feature_used", { feature: "restore_all" });
+    render();
+  }
+}
+
 // ============ 事件绑定 ============
 
 function persistAndRender() {
@@ -2304,6 +2359,8 @@ function persistAndRender() {
 }
 
 $("#refreshBtn").addEventListener("click", refreshCurrentTab);
+const restoreAllBtnEl = $("#restoreAllBtn");
+if (restoreAllBtnEl) restoreAllBtnEl.addEventListener("click", restoreAllHidden);
 $("#onlyPending").addEventListener("change", persistAndRender);
 $("#onlySubmittable").addEventListener("change", persistAndRender);
 $("#sortSelect").addEventListener("change", persistAndRender);
@@ -2333,7 +2390,7 @@ document.addEventListener("keydown", e => {
   if (box) box.focus();
 });
 $$(".tab").forEach(btn => btn.addEventListener("click", () => setTab(btn.dataset.type)));
-$("#clearLog").addEventListener("click", () => { $("#logBody").innerHTML = ""; });
+$("#clearLog").addEventListener("click", () => { logBuffer.length = 0; $("#logBody").innerHTML = ""; });
 
 const loginForm = $("#loginForm");
 if (loginForm) {
@@ -2389,9 +2446,62 @@ if (loginClear) {
   });
 }
 
+// ---------- 主题切换（浅色 / 深色 / 跟随系统） ----------
+
+const THEME_KEY = "chaoxing.theme.v1";
+const THEME_MODES = ["light", "dark", "system"];
+
+function readTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    if (THEME_MODES.includes(v)) return v;
+  } catch (e) {}
+  return "system";
+}
+
+function applyTheme(mode) {
+  const root = document.documentElement;
+  if (mode === "system") {
+    root.removeAttribute("data-theme");
+  } else {
+    root.setAttribute("data-theme", mode);
+  }
+}
+
+function cycleTheme() {
+  const modes = THEME_MODES;
+  const cur = readTheme();
+  const next = modes[(modes.indexOf(cur) + 1) % modes.length];
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  applyTheme(next);
+  updateThemeBtn(next);
+  log("切换主题:", next);
+}
+
+function updateThemeBtn(mode) {
+  const btn = $("#themeToggle");
+  if (!btn) return;
+  const map = { light: "☀ 浅色", dark: "☾ 深色", system: "◐ 跟随系统" };
+  btn.textContent = map[mode] || map.system;
+  btn.title = "当前主题：" + (map[mode] || map.system) + "（点击切换）";
+}
+
+function setupThemeToggle() {
+  const btn = $("#themeToggle");
+  if (!btn) return;
+  applyTheme(readTheme());
+  updateThemeBtn(readTheme());
+  btn.addEventListener("click", cycleTheme);
+  // 跟随系统时实时响应系统变化
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (readTheme() === "system") applyTheme("system");
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderVersion();
   setupAdvancedUnlock();
+  setupThemeToggle();
   applyUiPrefs();
   bootstrap();
 });
